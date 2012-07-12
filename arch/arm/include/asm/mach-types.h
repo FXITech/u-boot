@@ -1105,6 +1105,7 @@ extern unsigned int __machine_arch_type;
 #define MACH_TYPE_UBISYS_P9D_EVP       3493
 #define MACH_TYPE_ATDGP318             3494
 #define MACH_TYPE_OMAP5_SEVM           3777
+#define MACH_TYPE_COTTONCANDY          3860
 
 #ifdef CONFIG_ARCH_EBSA110
 # ifdef machine_arch_type
@@ -14220,6 +14221,18 @@ extern unsigned int __machine_arch_type;
 # define machine_is_omap5_sevm()      (machine_arch_type == MACH_TYPE_OMAP5_SEVM)
 #else
 # define machine_is_omap5_sevm()      (0)
+#endif
+
+#ifdef CONFIG_MACH_COTTONCANDY
+# ifdef machine_arch_type
+#  undef machine_arch_type
+#  define machine_arch_type	__machine_arch_type
+# else
+#  define machine_arch_type	MACH_TYPE_COTTONCANDY
+# endif
+# define machine_is_cottoncandy()	(machine_arch_type == MACH_COTTONCANDY_ORIGEN)
+#else
+# define machine_is_cottoncandy()	(0)
 #endif
 
 /*
