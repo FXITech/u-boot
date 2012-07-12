@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2011 Samsung Electronics
  *
- * Configuration settings for the SAMSUNG ORIGEN (EXYNOS4210) board.
+ * Configuration settings for the FXI COTTONCANDY (EXYNOS4210) board.
  *
  * See file CREDITS for list of people who contributed to this
  * project.
