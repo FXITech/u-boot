@@ -64,7 +64,7 @@
 
 /* select serial console configuration */
 #define CONFIG_SERIAL_MULTI		1
-#define CONFIG_SERIAL2			1	/* use SERIAL 2 */
+#define CONFIG_SERIAL1			1	/* use SERIAL 1 */
 #define CONFIG_BAUDRATE			115200
 #define EXYNOS4_DEFAULT_UART_OFFSET	0x020000
 
@@ -116,7 +116,7 @@
 #define CONFIG_SYS_MEMTEST_END		(CONFIG_SYS_SDRAM_BASE + 0x6000000)
 #define CONFIG_SYS_LOAD_ADDR		(CONFIG_SYS_SDRAM_BASE + 0x3E00000)
 
-//#define CONFIG_SYS_HZ			1000
+/* #define CONFIG_ SYS_ HZ was 1000 */
 #define CONFIG_SYS_HZ			4168750
 
 /* Stack sizes */
