@@ -14230,7 +14230,7 @@ extern unsigned int __machine_arch_type;
 # else
 #  define machine_arch_type	MACH_TYPE_COTTONCANDY
 # endif
-# define machine_is_cottoncandy()	(machine_arch_type == MACH_COTTONCANDY_ORIGEN)
+# define machine_is_cottoncandy()	(machine_arch_type == MACH_TYPE_COTTONCANDY)
 #else
 # define machine_is_cottoncandy()	(0)
 #endif
