@@ -1,6 +1,6 @@
 /*
  * (C) Copyright 2007-2008
- * Stelian Pop <stelian@popies.net>
+ * Stelian Pop <stelian.pop@leadtechdesign.com>
  * Lead Tech Design <www.leadtechdesign.com>
  *
  * (C) Copyright 2010
@@ -33,10 +33,8 @@
 #define TIMER_LOAD_VAL	0xffffffff
 #define TIMER_FREQ	(CONFIG_MB86R0x_IOCLK  / 256)
 
-DECLARE_GLOBAL_DATA_PTR;
-
-#define timestamp gd->tbl
-#define lastdec gd->lastinc
+static unsigned long long timestamp;
+static ulong lastdec;
 
 static inline unsigned long long tick_to_time(unsigned long long tick)
 {
@@ -68,9 +66,7 @@ int timer_init(void)
 
 	writel(ctrl, &timer->control);
 
-	/* capture current value time */
-	lastdec = readl(&timer->value);
-	timestamp = 0; /* start "advancing" time stamp from 0 */
+	reset_timer_masked();
 
 	return 0;
 }
@@ -96,6 +92,16 @@ unsigned long long get_ticks(void)
 	return timestamp;
 }
 
+void reset_timer_masked(void)
+{
+	struct mb86r0x_timer * timer = (struct mb86r0x_timer *)
+					MB86R0x_TIMER_BASE;
+
+	/* capture current value time */
+	lastdec = readl(&timer->value);
+	timestamp = 0; /* start "advancing" time stamp from 0 */
+}
+
 ulong get_timer_masked(void)
 {
 	return tick_to_time(get_ticks());
@@ -111,6 +117,11 @@ void __udelay(unsigned long usec)
 
 	while ((get_ticks() - tmp) < tmo)	/* loop till event */
 		 /*NOP*/;
+}
+
+void reset_timer(void)
+{
+	reset_timer_masked();
 }
 
 ulong get_timer(ulong base)

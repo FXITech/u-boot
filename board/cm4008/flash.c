@@ -72,7 +72,7 @@ unsigned long flash_init (void)
 	 */
 	flash_protect (FLAG_PROTECT_SET,
 		       CONFIG_SYS_FLASH_BASE,
-		       CONFIG_SYS_FLASH_BASE + _bss_start_ofs,
+		       CONFIG_SYS_FLASH_BASE + _bss_start - _armboot_start,
 		       &flash_info[0]);
 
 	return size;
@@ -206,10 +206,9 @@ static ulong flash_get_size (unsigned char * addr, flash_info_t * info)
 
 int flash_erase (flash_info_t * info, int s_first, int s_last)
 {
-	int prot, sect;
+	int flag, prot, sect;
 	ulong type;
 	int rcode = 0;
-	ulong start;
 
 	if ((s_first < 0) || (s_first > s_last)) {
 		if (info->flash_id == FLASH_UNKNOWN) {
@@ -240,7 +239,7 @@ int flash_erase (flash_info_t * info, int s_first, int s_last)
 		printf ("\n");
 
 	/* Disable interrupts which might cause a timeout here */
-	disable_interrupts();
+	flag = disable_interrupts ();
 
 	/* Start erase on unprotected sectors */
 	for (sect = s_first; sect <= s_last; sect++) {
@@ -251,7 +250,7 @@ int flash_erase (flash_info_t * info, int s_first, int s_last)
 			printf ("Erasing sector %2d ... ", sect);
 
 			/* arm simple, non interrupt dependent timer */
-			start = get_timer(0);
+			reset_timer_masked ();
 
 			addr = (volatile unsigned char *) (info->start[sect]);
 			*addr = 0x50;	/* clear status register */
@@ -259,7 +258,7 @@ int flash_erase (flash_info_t * info, int s_first, int s_last)
 			*addr = 0xD0;	/* erase confirm */
 
 			while (((status = *addr) & 0x80) != 0x80) {
-				if (get_timer(start) >
+				if (get_timer_masked () >
 				    CONFIG_SYS_FLASH_ERASE_TOUT) {
 					printf ("Timeout\n");
 					*addr = 0xB0;	/* suspend erase */
@@ -370,7 +369,7 @@ static int write_data (flash_info_t * info, ulong dest, unsigned char data)
 {
 	volatile unsigned char *addr = (volatile unsigned char *) dest;
 	ulong status;
-	ulong start;
+	int flag;
 
 	/* Check if Flash is (sufficiently) erased */
 	if ((*addr & data) != data) {
@@ -379,17 +378,17 @@ static int write_data (flash_info_t * info, ulong dest, unsigned char data)
 		return (2);
 	}
 	/* Disable interrupts which might cause a timeout here */
-	disable_interrupts();
+	flag = disable_interrupts ();
 
 	*addr = 0x40;	/* write setup */
 	*addr = data;
 
 	/* arm simple, non interrupt dependent timer */
-	start = get_timer(0);
+	reset_timer_masked ();
 
 	/* wait while polling the status register */
 	while (((status = *addr) & 0x80) != 0x80) {
-		if (get_timer(start) > CONFIG_SYS_FLASH_WRITE_TOUT) {
+		if (get_timer_masked () > CONFIG_SYS_FLASH_WRITE_TOUT) {
 			*addr = 0xFF;	/* restore read mode */
 			return (1);
 		}

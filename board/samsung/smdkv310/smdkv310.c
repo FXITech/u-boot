@@ -1,90 +1,176 @@
 /*
- * Copyright (C) 2011 Samsung Electronics
+ * (C) Copyright 2011 Samsung Electronics Co. Ltd
  *
  * See file CREDITS for list of people who contributed to this
  * project.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
  */
-
+ 
 #include <common.h>
-#include <asm/io.h>
-#include <netdev.h>
 #include <asm/arch/cpu.h>
 #include <asm/arch/gpio.h>
-#include <asm/arch/mmc.h>
-#include <asm/arch/sromc.h>
+
+unsigned int OmPin;
 
 DECLARE_GLOBAL_DATA_PTR;
-struct exynos4_gpio_part1 *gpio1;
-struct exynos4_gpio_part2 *gpio2;
+extern int nr_dram_banks;
+#ifdef CONFIG_EVT1
+unsigned int dmc_density = 0xffffffff;
+#endif
+unsigned int second_boot_info = 0xffffffff;
 
+/* ------------------------------------------------------------------------- */
+#define SMC9115_Tacs	(0x0)	// 0clk		address set-up
+#define SMC9115_Tcos	(0x4)	// 4clk		chip selection set-up
+#define SMC9115_Tacc	(0xe)	// 14clk	access cycle
+#define SMC9115_Tcoh	(0x1)	// 1clk		chip selection hold
+#define SMC9115_Tah	(0x4)	// 4clk		address holding time
+#define SMC9115_Tacp	(0x6)	// 6clk		page mode access cycle
+#define SMC9115_PMC	(0x0)	// normal(1data)page mode configuration
+
+#define SROM_DATA16_WIDTH(x)	(1<<((x*4)+0))
+#define SROM_WAIT_ENABLE(x)	(1<<((x*4)+1))
+#define SROM_BYTE_ENABLE(x)	(1<<((x*4)+2))
+
+/*
+ * Miscellaneous platform dependent initialisations
+ */
 static void smc9115_pre_init(void)
 {
-	u32 smc_bw_conf, smc_bc_conf;
+        unsigned int cs1;
+	/* gpio configuration */
+	writel(0x00000020, 0x11000000 + 0x120);
 
-	/* gpio configuration GPK0CON */
-	s5p_gpio_cfg_pin(&gpio2->y0, CONFIG_ENV_SROM_BANK, GPIO_FUNC(2));
+	/* 16 Bit bus width */
+	writel(0x22222222, 0x11000000 + 0x1C0);
+	writel(0x22222222, 0x11000000 + 0x1E0);
 
-	/* Ethernet needs bus width of 16 bits */
-	smc_bw_conf = SROMC_DATA16_WIDTH(CONFIG_ENV_SROM_BANK);
-	smc_bc_conf = SROMC_BC_TACS(0x0F) | SROMC_BC_TCOS(0x0F)
-			| SROMC_BC_TACC(0x0F) | SROMC_BC_TCOH(0x0F)
-			| SROMC_BC_TAH(0x0F)  | SROMC_BC_TACP(0x0F)
-			| SROMC_BC_PMC(0x0F);
+	/* SROM BANK1 */
+        cs1 = SROM_BW_REG & ~(0xF<<4);
+	cs1 |= ((1 << 0) |
+		(0 << 2) |
+		(1 << 3)) << 4;                
 
-	/* Select and configure the SROMC bank */
-	s5p_config_sromc(CONFIG_ENV_SROM_BANK, smc_bw_conf, smc_bc_conf);
+        SROM_BW_REG = cs1;
+
+	/* set timing for nCS1 suitable for ethernet chip */
+	SROM_BC1_REG = ( (0x1 << 0) |
+		     (0x9 << 4) |
+		     (0xc << 8) |
+		     (0x1 << 12) |
+		     (0x6 << 16) |
+		     (0x1 << 24) |
+		     (0x1 << 28) );
 }
 
+#define	PS_HOLD		*(volatile unsigned long *)(0x1002330C)
 int board_init(void)
 {
-	gpio1 = (struct exynos4_gpio_part1 *) EXYNOS4_GPIO_PART1_BASE;
-	gpio2 = (struct exynos4_gpio_part2 *) EXYNOS4_GPIO_PART2_BASE;
+	PS_HOLD = 0x5300;
 
-	smc9115_pre_init();
+        #ifdef CONFIG_SMC911X
+   	        smc9115_pre_init();
+        #endif
 
-	gd->bd->bi_boot_params = (PHYS_SDRAM_1 + 0x100UL);
+	if(((PRO_ID & 0x300) >> 8) == 2)
+		gd->bd->bi_arch_number = MACH_TYPE_C210;
+	else
+		gd->bd->bi_arch_number = MACH_TYPE_V310;
+
+	gd->bd->bi_boot_params = (PHYS_SDRAM_1+0x100);
+
+   	OmPin = INF_REG3_REG;
+	printf("\n\nChecking Boot Mode ...");
+	if(OmPin == BOOT_ONENAND) {
+		printf(" OneNand\n");
+	} else if (OmPin == BOOT_NAND) {
+		printf(" NAND\n");
+	} else if (OmPin == BOOT_MMCSD) {
+		printf(" SDMMC\n");
+	} else if (OmPin == BOOT_EMMC) {
+		printf(" EMMC4.3\n");
+	} else if (OmPin == BOOT_EMMC_4_4) {
+		printf(" EMMC4.41\n");
+	}
+
 	return 0;
 }
 
 int dram_init(void)
 {
-	gd->ram_size	= get_ram_size((long *)PHYS_SDRAM_1, PHYS_SDRAM_1_SIZE)
-			+ get_ram_size((long *)PHYS_SDRAM_2, PHYS_SDRAM_2_SIZE)
-			+ get_ram_size((long *)PHYS_SDRAM_3, PHYS_SDRAM_3_SIZE)
-			+ get_ram_size((long *)PHYS_SDRAM_4, PHYS_SDRAM_4_SIZE);
-
+	//gd->ram_size = get_ram_size((long *)PHYS_SDRAM_1, PHYS_SDRAM_1_SIZE);
+	
 	return 0;
 }
 
 void dram_init_banksize(void)
 {
-	gd->bd->bi_dram[0].start = PHYS_SDRAM_1;
-	gd->bd->bi_dram[0].size = get_ram_size((long *)PHYS_SDRAM_1, \
-							PHYS_SDRAM_1_SIZE);
-	gd->bd->bi_dram[1].start = PHYS_SDRAM_2;
-	gd->bd->bi_dram[1].size = get_ram_size((long *)PHYS_SDRAM_2, \
-							PHYS_SDRAM_2_SIZE);
-	gd->bd->bi_dram[2].start = PHYS_SDRAM_3;
-	gd->bd->bi_dram[2].size = get_ram_size((long *)PHYS_SDRAM_3, \
-							PHYS_SDRAM_3_SIZE);
-	gd->bd->bi_dram[3].start = PHYS_SDRAM_4;
-	gd->bd->bi_dram[3].size = get_ram_size((long *)PHYS_SDRAM_4, \
-							PHYS_SDRAM_4_SIZE);
+	if(((PRO_ID & 0x300) >> 8) == 2){
+#ifdef CONFIG_EVT1
+		printf("EVT1 ");
+		if(dmc_density == 6){
+			printf("POP_B\n");
+			nr_dram_banks = 4;
+			gd->bd->bi_dram[0].start = PHYS_SDRAM_1;
+			gd->bd->bi_dram[0].size = PHYS_SDRAM_1_SIZE;
+			gd->bd->bi_dram[1].start = PHYS_SDRAM_2;
+			gd->bd->bi_dram[1].size = PHYS_SDRAM_2_SIZE;
+			gd->bd->bi_dram[2].start = PHYS_SDRAM_3;
+			gd->bd->bi_dram[2].size = PHYS_SDRAM_3_SIZE;
+			gd->bd->bi_dram[3].start = PHYS_SDRAM_4;
+			gd->bd->bi_dram[3].size = PHYS_SDRAM_4_SIZE;
+		}
+		else if(dmc_density == 5){
+			printf("POP_A\n");
+			nr_dram_banks = 2;
+			gd->bd->bi_dram[0].start = PHYS_SDRAM_1;
+			gd->bd->bi_dram[0].size = PHYS_SDRAM_1_SIZE;
+			gd->bd->bi_dram[1].start = PHYS_SDRAM_2;
+			gd->bd->bi_dram[1].size = PHYS_SDRAM_2_SIZE;
+		}
+		else{
+			printf("unknown POP type\n");
+			nr_dram_banks = 2;
+			gd->bd->bi_dram[0].start = PHYS_SDRAM_1;
+			gd->bd->bi_dram[0].size = PHYS_SDRAM_1_SIZE;
+			gd->bd->bi_dram[1].start = PHYS_SDRAM_2;
+			gd->bd->bi_dram[1].size = PHYS_SDRAM_2_SIZE;
+		}
+#else
+		nr_dram_banks = 2;
+		gd->bd->bi_dram[0].start = PHYS_SDRAM_1;
+		gd->bd->bi_dram[0].size = PHYS_SDRAM_1_SIZE;
+		gd->bd->bi_dram[1].start = PHYS_SDRAM_2;
+		gd->bd->bi_dram[1].size = PHYS_SDRAM_2_SIZE;
+#endif
+	}
+	else{
+		nr_dram_banks = 8;
+		gd->bd->bi_dram[0].start = PHYS_SDRAM_1;
+		gd->bd->bi_dram[0].size = PHYS_SDRAM_1_SIZE;
+		gd->bd->bi_dram[1].start = PHYS_SDRAM_2;
+		gd->bd->bi_dram[1].size = PHYS_SDRAM_2_SIZE;
+		gd->bd->bi_dram[2].start = PHYS_SDRAM_3;
+		gd->bd->bi_dram[2].size = PHYS_SDRAM_3_SIZE;
+		gd->bd->bi_dram[3].start = PHYS_SDRAM_4;
+		gd->bd->bi_dram[3].size = PHYS_SDRAM_4_SIZE;
+		gd->bd->bi_dram[4].start = PHYS_SDRAM_5;
+		gd->bd->bi_dram[4].size = PHYS_SDRAM_5_SIZE;
+		gd->bd->bi_dram[5].start = PHYS_SDRAM_6;
+		gd->bd->bi_dram[5].size = PHYS_SDRAM_6_SIZE;
+		gd->bd->bi_dram[6].start = PHYS_SDRAM_7;
+		gd->bd->bi_dram[6].size = PHYS_SDRAM_7_SIZE;
+		gd->bd->bi_dram[7].start = PHYS_SDRAM_8;
+		gd->bd->bi_dram[7].size = PHYS_SDRAM_8_SIZE;
+	}
+
+#ifdef CONFIG_TRUSTZONE
+	gd->bd->bi_dram[nr_dram_banks - 1].size -= CONFIG_TRUSTZONE_RESERVED_DRAM;
+#endif
 }
 
 int board_eth_init(bd_t *bis)
@@ -99,41 +185,64 @@ int board_eth_init(bd_t *bis)
 #ifdef CONFIG_DISPLAY_BOARDINFO
 int checkboard(void)
 {
-	printf("\nBoard: SMDKV310\n");
+	printf("Board:\tSMDKV310\n");
+	
+	return 0;
+
+}
+#endif
+
+int board_late_init (void)
+{
+	GPIO_Init();
+	GPIO_SetFunctionEach(eGPIO_X0, eGPIO_0, 0);
+	GPIO_SetPullUpDownEach(eGPIO_X0, eGPIO_0, 0);
+
+	udelay(10);
+	if (GPIO_GetDataEach(eGPIO_X0, eGPIO_0) == 0 || second_boot_info == 1){
+		setenv ("bootcmd", CONFIG_BOOTCOMMAND);
+	}
+
+	GPIO_SetFunctionEach(eGPIO_C1, eGPIO_3, eGPO);
+	GPIO_SetDataEach(eGPIO_C1, eGPIO_3, 1);
+
+	GPIO_SetFunctionEach(eGPIO_K1, eGPIO_6, eGPO);
+	GPIO_SetDataEach(eGPIO_K1, eGPIO_6, 1);
+
+	GPIO_SetFunctionEach(eGPIO_X3, eGPIO_3, eGPO);
+	GPIO_SetPullUpDownEach(eGPIO_X3, eGPIO_3, 0);
+	GPIO_SetDataEach(eGPIO_X3, eGPIO_3, 1);
+
 	return 0;
 }
-#endif
 
-#ifdef CONFIG_GENERIC_MMC
 int board_mmc_init(bd_t *bis)
 {
-	int i, err;
-
-	/*
-	 * MMC2 SD card GPIO:
-	 *
-	 * GPK2[0]	SD_2_CLK(2)
-	 * GPK2[1]	SD_2_CMD(2)
-	 * GPK2[2]	SD_2_CDn
-	 * GPK2[3:6]	SD_2_DATA[0:3](2)
-	 */
-	for (i = 0; i < 7; i++) {
-		/* GPK2[0:6] special function 2 */
-		s5p_gpio_cfg_pin(&gpio2->k2, i, GPIO_FUNC(0x2));
-
-		/* GPK2[0:6] drv 4x */
-		s5p_gpio_set_drv(&gpio2->k2, i, GPIO_DRV_4X);
-
-		/* GPK2[0:1] pull disable */
-		if (i == 0 || i == 1) {
-			s5p_gpio_set_pull(&gpio2->k2, i, GPIO_PULL_NONE);
-			continue;
-		}
-
-		/* GPK2[2:6] pull up */
-		s5p_gpio_set_pull(&gpio2->k2, i, GPIO_PULL_UP);
+#ifdef CONFIG_S3C_HSMMC
+	setup_hsmmc_clock();
+	setup_hsmmc_cfg_gpio();
+	if (OmPin == BOOT_EMMC_4_4 || OmPin == BOOT_EMMC) {
+#ifdef CONFIG_S5PC210
+		smdk_s5p_mshc_init();
+#endif
+		smdk_s3c_hsmmc_init();
+	} else {
+		smdk_s3c_hsmmc_init();
+#ifdef CONFIG_S5PC210
+		smdk_s5p_mshc_init();
+#endif
 	}
-	err = s5p_mmc_init(2, 4);
-	return err;
+#endif
+	return 0;
+}
+
+#ifdef CONFIG_ENABLE_MMU
+ulong virt_to_phy_s5pv310(ulong addr)
+{
+	if ((0xc0000000 <= addr) && (addr < 0xe0000000))
+		return (addr - 0xc0000000 + 0x40000000);
+
+	return addr;
 }
 #endif
+

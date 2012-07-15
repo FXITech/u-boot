@@ -3,8 +3,8 @@
  *
  *  Copyright (c) 2004	Texas Instruments <r-woodruff2@ti.com>
  *
- *  Copyright (c) 2001	Marius GrÃ¶ger <mag@sysgo.de>
- *  Copyright (c) 2002	Alex ZÃ¼pke <azu@sysgo.de>
+ *  Copyright (c) 2001	Marius Gröger <mag@sysgo.de>
+ *  Copyright (c) 2002	Alex Züpke <azu@sysgo.de>
  *  Copyright (c) 2002	Gary Jennejohn <garyj@denx.de>
  *  Copyright (c) 2003	Richard Woodruff <r-woodruff2@ti.com>
  *  Copyright (c) 2003	Kshitij <kshitij@ti.com>
@@ -33,7 +33,7 @@
 #include <version.h>
 .globl _start
 _start: b	reset
-#ifdef CONFIG_SPL_BUILD
+#ifdef CONFIG_PRELOADER
 	ldr	pc, _hang
 	ldr	pc, _hang
 	ldr	pc, _hang
@@ -68,7 +68,7 @@ _not_used:		.word not_used
 _irq:			.word irq
 _fiq:			.word fiq
 _pad:			.word 0x12345678 /* now 16*4=64 */
-#endif	/* CONFIG_SPL_BUILD */
+#endif	/* CONFIG_PRELOADER */
 .global _end_vect
 _end_vect:
 
@@ -102,10 +102,6 @@ _bss_start_ofs:
 
 .globl _bss_end_ofs
 _bss_end_ofs:
-	.word __bss_end__ - _start
-
-.globl _end_ofs
-_end_ofs:
 	.word _end - _start
 
 #ifdef CONFIG_USE_IRQ
@@ -167,7 +163,15 @@ call_board_init_f:
 	bic	sp, sp, #7 /* 8-byte alignment for ABI compliance */
 	ldr	r0,=0x00000000
 
+#ifdef CONFIG_NAND_SPL
+	bl	nand_boot
+#else
+#ifdef CONFIG_ONENAND_IPL
+	bl	start_oneboot
+#else
 	bl	board_init_f
+#endif /* CONFIG_ONENAND_IPL */
+#endif /* CONFIG_NAND_SPL */
 
 /*------------------------------------------------------------------------------*/
 
@@ -192,6 +196,7 @@ stack_setup:
 	cmp	r0, r6
 	beq	clear_bss		/* skip relocation */
 	mov	r1, r6			/* r1 <- scratch for copy_loop */
+	ldr	r2, _TEXT_BASE
 	ldr	r3, _bss_start_ofs
 	add	r2, r0, r3		/* r2 <- source end address	    */
 
@@ -201,7 +206,7 @@ copy_loop:
 	cmp	r0, r2			/* until source end address [r2]    */
 	blo	copy_loop
 
-#ifndef CONFIG_SPL_BUILD
+#ifndef CONFIG_PRELOADER
 	/*
 	 * fix .rel.dyn relocations
 	 */
@@ -243,9 +248,10 @@ fixnext:
 #endif
 
 clear_bss:
-#ifndef CONFIG_SPL_BUILD
+#ifndef CONFIG_PRELOADER
 	ldr	r0, _bss_start_ofs
 	ldr	r1, _bss_end_ofs
+	ldr	r3, _TEXT_BASE		/* Text base */
 	mov	r4, r6			/* reloc addr */
 	add	r0, r0, r4
 	add	r1, r1, r4
@@ -255,7 +261,7 @@ clbss_l:str	r2, [r0]		/* clear loop...		    */
 	add	r0, r0, #4
 	cmp	r0, r1
 	bne	clbss_l
-#endif	/* #ifndef CONFIG_SPL_BUILD */
+#endif	/* #ifndef CONFIG_PRELOADER */
 
 /*
  * We are done. Do not return, instead branch to second part of board
@@ -263,14 +269,14 @@ clbss_l:str	r2, [r0]		/* clear loop...		    */
  */
 #ifdef CONFIG_NAND_SPL
 	ldr     r0, _nand_boot_ofs
-	mov	pc, r0
-
-_nand_boot_ofs:
-	.word nand_boot
+	adr	r1, _start
+	add	pc, r0, r1
+_nand_boot_ofs
+	: .word nand_boot - _start
 #else
 jump_2_ram:
 	ldr	r0, _board_init_r_ofs
-	ldr     r1, _TEXT_BASE
+	adr	r1, _start
 	add	lr, r0, r1
 	add	lr, lr, r9
 	/* setup parameters for board_init_r */
@@ -329,7 +335,7 @@ cpu_init_crit:
 	mov	pc, lr		/* back to my caller */
 #endif /* CONFIG_SKIP_LOWLEVEL_INIT */
 
-#ifndef CONFIG_SPL_BUILD
+#ifndef CONFIG_PRELOADER
 /*
  *************************************************************************
  *
@@ -436,17 +442,17 @@ cpu_init_crit:
 	.macro get_fiq_stack			@ setup FIQ stack
 	ldr	sp, FIQ_STACK_START
 	.endm
-#endif	/* CONFIG_SPL_BUILD */
+#endif	/* CONFIG_PRELOADER */
 
 /*
  * exception handlers
  */
-#ifdef CONFIG_SPL_BUILD
+#ifdef CONFIG_PRELOADER
 	.align	5
 do_hang:
 	ldr	sp, _TEXT_BASE			/* use 32 words about stack */
 	bl	hang				/* hang and never return */
-#else	/* !CONFIG_SPL_BUILD */
+#else	/* !CONFIG_PRELOADER */
 	.align	5
 undefined_instruction:
 	get_bad_stack
@@ -512,11 +518,11 @@ fiq:
 	.align 5
 .global arm1136_cache_flush
 arm1136_cache_flush:
-#if !defined(CONFIG_SYS_ICACHE_OFF)
+#if !defined(CONFIG_SYS_NO_ICACHE)
 		mcr	p15, 0, r1, c7, c5, 0	@ invalidate I cache
 #endif
-#if !defined(CONFIG_SYS_DCACHE_OFF)
+#if !defined(CONFIG_SYS_NO_DCACHE)
 		mcr	p15, 0, r1, c7, c14, 0	@ invalidate D cache
 #endif
 		mov	pc, lr			@ back to caller
-#endif	/* CONFIG_SPL_BUILD */
+#endif	/* CONFIG_PRELOADER */

@@ -33,7 +33,6 @@
 
 #include <common.h>
 #include <asm/arch/pxa-regs.h>
-#include <asm/arch/pxa.h>
 #include <netdev.h>
 #include <asm/io.h>
 
@@ -140,9 +139,10 @@ struct serial_device *default_serial_console (void)
 	return &serial_ffuart_device;
 }
 
+extern void pxa_dram_init(void);
 int dram_init(void)
 {
-	pxa2xx_dram_init();
+	pxa_dram_init();
 	gd->ram_size = PHYS_SDRAM_1_SIZE;
 	return 0;
 }

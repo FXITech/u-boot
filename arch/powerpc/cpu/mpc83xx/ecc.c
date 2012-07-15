@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2011 Freescale Semiconductor, Inc.
+ * Copyright (C) 2007 Freescale Semiconductor, Inc.
  *
  * Dave Liu <daveliu@freescale.com>
  * based on the contribution of Marian Balakowicz <m8@semihalf.com>
@@ -20,12 +20,8 @@
 #if defined(CONFIG_DDR_ECC) && defined(CONFIG_DDR_ECC_CMD)
 void ecc_print_status(void)
 {
-	immap_t *immap = (immap_t *) CONFIG_SYS_IMMR;
-#ifdef CONFIG_FSL_DDR2
-	ccsr_ddr_t *ddr = &immap->ddr;
-#else
-	ddr83xx_t *ddr = &immap->ddr;
-#endif
+	volatile immap_t *immap = (immap_t *) CONFIG_SYS_IMMR;
+	volatile ddr83xx_t *ddr = &immap->ddr;
 
 	printf("\nECC mode: %s\n\n",
 	       (ddr->sdram_cfg & SDRAM_CFG_ECC_EN) ? "ON" : "OFF");
@@ -104,12 +100,8 @@ void ecc_print_status(void)
 
 int do_ecc(cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[])
 {
-	immap_t *immap = (immap_t *) CONFIG_SYS_IMMR;
-#ifdef CONFIG_FSL_DDR2
-	ccsr_ddr_t *ddr = &immap->ddr;
-#else
-	ddr83xx_t *ddr = &immap->ddr;
-#endif
+	volatile immap_t *immap = (immap_t *) CONFIG_SYS_IMMR;
+	volatile ddr83xx_t *ddr = &immap->ddr;
 	volatile u32 val;
 	u64 *addr;
 	u32 count;

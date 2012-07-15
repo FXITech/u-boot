@@ -38,6 +38,7 @@
 #endif
 
 #undef CONFIG_SYS_FPGA_CHECK_BUSY
+#undef CONFIG_SYS_FPGA_PROG_FEEDBACK
 
 /* Note: The assumption is that we cannot possibly run fast enough to
  * overrun the device (the Slave Parallel mode can free run at 50MHz).
@@ -52,17 +53,17 @@
 #define CONFIG_SYS_FPGA_WAIT CONFIG_SYS_HZ/100	/* 10 ms */
 #endif
 
-static int Spartan3_sp_load(Xilinx_desc *desc, const void *buf, size_t bsize);
-static int Spartan3_sp_dump(Xilinx_desc *desc, const void *buf, size_t bsize);
-/* static int Spartan3_sp_info(Xilinx_desc *desc ); */
+static int Spartan3_sp_load( Xilinx_desc *desc, void *buf, size_t bsize );
+static int Spartan3_sp_dump( Xilinx_desc *desc, void *buf, size_t bsize );
+/* static int Spartan3_sp_info( Xilinx_desc *desc ); */
 
-static int Spartan3_ss_load(Xilinx_desc *desc, const void *buf, size_t bsize);
-static int Spartan3_ss_dump(Xilinx_desc *desc, const void *buf, size_t bsize);
-/* static int Spartan3_ss_info(Xilinx_desc *desc); */
+static int Spartan3_ss_load( Xilinx_desc *desc, void *buf, size_t bsize );
+static int Spartan3_ss_dump( Xilinx_desc *desc, void *buf, size_t bsize );
+/* static int Spartan3_ss_info( Xilinx_desc *desc ); */
 
 /* ------------------------------------------------------------------------- */
 /* Spartan-II Generic Implementation */
-int Spartan3_load(Xilinx_desc *desc, const void *buf, size_t bsize)
+int Spartan3_load (Xilinx_desc * desc, void *buf, size_t bsize)
 {
 	int ret_val = FPGA_FAIL;
 
@@ -85,7 +86,7 @@ int Spartan3_load(Xilinx_desc *desc, const void *buf, size_t bsize)
 	return ret_val;
 }
 
-int Spartan3_dump(Xilinx_desc *desc, const void *buf, size_t bsize)
+int Spartan3_dump (Xilinx_desc * desc, void *buf, size_t bsize)
 {
 	int ret_val = FPGA_FAIL;
 
@@ -117,7 +118,7 @@ int Spartan3_info( Xilinx_desc *desc )
 /* ------------------------------------------------------------------------- */
 /* Spartan-II Slave Parallel Generic Implementation */
 
-static int Spartan3_sp_load(Xilinx_desc *desc, const void *buf, size_t bsize)
+static int Spartan3_sp_load (Xilinx_desc * desc, void *buf, size_t bsize)
 {
 	int ret_val = FPGA_FAIL;	/* assume the worst */
 	Xilinx_Spartan3_Slave_Parallel_fns *fn = desc->iface_fns;
@@ -271,7 +272,7 @@ static int Spartan3_sp_load(Xilinx_desc *desc, const void *buf, size_t bsize)
 	return ret_val;
 }
 
-static int Spartan3_sp_dump(Xilinx_desc *desc, const void *buf, size_t bsize)
+static int Spartan3_sp_dump (Xilinx_desc * desc, void *buf, size_t bsize)
 {
 	int ret_val = FPGA_FAIL;	/* assume the worst */
 	Xilinx_Spartan3_Slave_Parallel_fns *fn = desc->iface_fns;
@@ -319,7 +320,7 @@ static int Spartan3_sp_dump(Xilinx_desc *desc, const void *buf, size_t bsize)
 
 /* ------------------------------------------------------------------------- */
 
-static int Spartan3_ss_load(Xilinx_desc *desc, const void *buf, size_t bsize)
+static int Spartan3_ss_load (Xilinx_desc * desc, void *buf, size_t bsize)
 {
 	int ret_val = FPGA_FAIL;	/* assume the worst */
 	Xilinx_Spartan3_Slave_Serial_fns *fn = desc->iface_fns;
@@ -365,8 +366,6 @@ static int Spartan3_ss_load(Xilinx_desc *desc, const void *buf, size_t bsize)
 			CONFIG_FPGA_DELAY ();
 			if (get_timer (ts) > CONFIG_SYS_FPGA_WAIT) {	/* check the time */
 				puts ("** Timeout waiting for INIT to start.\n");
-				if (*fn->abort)
-					(*fn->abort) (cookie);
 				return FPGA_FAIL;
 			}
 		} while (!(*fn->init) (cookie));
@@ -381,8 +380,6 @@ static int Spartan3_ss_load(Xilinx_desc *desc, const void *buf, size_t bsize)
 			CONFIG_FPGA_DELAY ();
 			if (get_timer (ts) > CONFIG_SYS_FPGA_WAIT) {	/* check the time */
 				puts ("** Timeout waiting for INIT to clear.\n");
-				if (*fn->abort)
-					(*fn->abort) (cookie);
 				return FPGA_FAIL;
 			}
 		} while ((*fn->init) (cookie));
@@ -397,8 +394,6 @@ static int Spartan3_ss_load(Xilinx_desc *desc, const void *buf, size_t bsize)
 				   while DONE is low (inactive) */
 				if ((*fn->done) (cookie) == 0 && (*fn->init) (cookie)) {
 					puts ("** CRC error during FPGA load.\n");
-					if (*fn->abort)
-						(*fn->abort) (cookie);
 					return (FPGA_FAIL);
 				}
 				val = data [bytecount ++];
@@ -474,7 +469,7 @@ static int Spartan3_ss_load(Xilinx_desc *desc, const void *buf, size_t bsize)
 	return ret_val;
 }
 
-static int Spartan3_ss_dump(Xilinx_desc *desc, const void *buf, size_t bsize)
+static int Spartan3_ss_dump (Xilinx_desc * desc, void *buf, size_t bsize)
 {
 	/* Readback is only available through the Slave Parallel and         */
 	/* boundary-scan interfaces.                                         */

@@ -33,6 +33,7 @@
 #include <malloc.h>
 
 static int bmp_info (ulong addr);
+static int bmp_display (ulong addr, int x, int y);
 
 /*
  * Allocate and decompress a BMP image using gunzip().
@@ -78,7 +79,7 @@ bmp_image_t *gunzip_bmp(unsigned long addr, unsigned long *lenp)
 		return NULL;
 	}
 
-	debug("Gzipped BMP image detected!\n");
+	puts("Gzipped BMP image detected!\n");
 
 	return bmp;
 }
@@ -101,7 +102,7 @@ static int do_bmp_info(cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[
 		addr = simple_strtoul(argv[1], NULL, 16);
 		break;
 	default:
-		return CMD_RET_USAGE;
+		return cmd_usage(cmdtp);
 	}
 
 	return (bmp_info(addr));
@@ -125,7 +126,7 @@ static int do_bmp_display(cmd_tbl_t * cmdtp, int flag, int argc, char * const ar
 	        y = simple_strtoul(argv[3], NULL, 10);
 	        break;
 	default:
-		return CMD_RET_USAGE;
+		return cmd_usage(cmdtp);
 	}
 
 	 return (bmp_display(addr, x, y));
@@ -165,7 +166,7 @@ static int do_bmp(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	if (c)
 		return  c->cmd(cmdtp, flag, argc, argv);
 	else
-		return CMD_RET_USAGE;
+		return cmd_usage(cmdtp);
 }
 
 U_BOOT_CMD(
@@ -220,7 +221,7 @@ static int bmp_info(ulong addr)
  * Return:      None
  *
  */
-int bmp_display(ulong addr, int x, int y)
+static int bmp_display(ulong addr, int x, int y)
 {
 	int ret;
 	bmp_image_t *bmp = (bmp_image_t *)addr;
@@ -236,7 +237,9 @@ int bmp_display(ulong addr, int x, int y)
 	}
 
 #if defined(CONFIG_LCD)
-	ret = lcd_display_bitmap((ulong)bmp, x, y);
+	extern int lcd_display_bitmap (ulong, int, int);
+
+	ret = lcd_display_bitmap ((unsigned long)bmp, x, y);
 #elif defined(CONFIG_VIDEO)
 	extern int video_display_bitmap (ulong, int, int);
 

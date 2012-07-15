@@ -23,10 +23,8 @@
 
 #include <common.h>
 #include <linux/usb/ch9.h>
-#include <usbdescriptors.h>
 #include <asm/errno.h>
 #include <linux/usb/gadget.h>
-#include <asm/unaligned.h>
 #include "gadget_chips.h"
 
 #define isdigit(c)      ('0' <= (c) && (c) <= '9')
@@ -129,7 +127,7 @@ static int ep_matches(
 	 * where it's an output parameter representing the full speed limit.
 	 * the usb spec fixes high speed bulk maxpacket at 512 bytes.
 	 */
-	max = 0x7ff & le16_to_cpu(get_unaligned(&desc->wMaxPacketSize));
+	max = 0x7ff & le16_to_cpu(desc->wMaxPacketSize);
 	switch (type) {
 	case USB_ENDPOINT_XFER_INT:
 		/* INT:  limit 64 bytes full speed, 1024 high speed */
@@ -145,8 +143,7 @@ static int ep_matches(
 			return 0;
 
 		/* BOTH:  "high bandwidth" works only at high speed */
-		if ((get_unaligned(&desc->wMaxPacketSize) &
-					__constant_cpu_to_le16(3<<11))) {
+		if ((desc->wMaxPacketSize & __constant_cpu_to_le16(3<<11))) {
 			if (!gadget->is_dualspeed)
 				return 0;
 			/* configure your hardware with enough buffering!! */
@@ -179,7 +176,7 @@ static int ep_matches(
 		/* min() doesn't work on bitfields with gcc-3.5 */
 		if (size > 64)
 			size = 64;
-		put_unaligned(cpu_to_le16(size), &desc->wMaxPacketSize);
+		desc->wMaxPacketSize = cpu_to_le16(size);
 	}
 	return 1;
 }

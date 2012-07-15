@@ -62,6 +62,7 @@ int mdm_init (void)
 	char env_str[16];
 	char *init_str;
 	int i;
+	extern char console_buffer[];
 	extern void enable_putc(void);
 	extern int hwflow_onoff(int);
 

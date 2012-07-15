@@ -21,25 +21,24 @@
  * MA 02111-1307 USA
  */
 
-#if defined(CONFIG_CMD_RARP)
 
 #ifndef __RARP_H__
 #define __RARP_H__
 
+#ifndef __NET_H__
 #include <net.h>
+#endif /* __NET_H__ */
+
 
 /**********************************************************************/
 /*
  *	Global functions and variables.
  */
 
-extern int RarpTry;
+extern int	RarpTry;
 
-/* Process the receipt of a RARP packet */
-extern void rarp_receive(struct ip_udp_hdr *ip, unsigned len);
-extern void RarpRequest(void);	/* Send a RARP request */
+extern void RarpRequest (void);	/* Send a RARP request */
 
 /**********************************************************************/
 
 #endif /* __RARP_H__ */
-#endif

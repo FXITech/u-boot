@@ -1,6 +1,6 @@
 /*
  * (C) Copyright 2007-2008
- * Stelian Pop <stelian@popies.net>
+ * Stelian Pop <stelian.pop@leadtechdesign.com>
  * Lead Tech Design <www.leadtechdesign.com>
  *
  * (C) Copyright 2010
@@ -29,11 +29,9 @@
 #include <net.h>
 #include <netdev.h>
 #include <mmc.h>
-#include <atmel_mci.h>
 #include <i2c.h>
 #include <spi.h>
-#include <asm/io.h>
-#include <asm/arch/hardware.h>
+#include <asm/arch/at91sam9260.h>
 #include <asm/arch/at91sam9260_matrix.h>
 #include <asm/arch/at91sam9_smc.h>
 #include <asm/arch/at91_common.h>
@@ -41,35 +39,35 @@
 #include <asm/arch/at91_rstc.h>
 #include <asm/arch/at91_shdwn.h>
 #include <asm/arch/gpio.h>
+#include <asm/arch/io.h>
+#include <asm/arch/hardware.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
 #ifdef CONFIG_CMD_NAND
 static void nand_hw_init(void)
 {
-	struct at91_smc *smc = (struct at91_smc *)ATMEL_BASE_SMC;
-	struct at91_matrix *matrix = (struct at91_matrix *)ATMEL_BASE_MATRIX;
 	unsigned long csa;
 
-	/* Assign CS3 to NAND/SmartMedia Interface */
-	csa = readl(&matrix->ebicsa);
-	csa |= AT91_MATRIX_CS3A_SMC_SMARTMEDIA;
-	writel(csa, &matrix->ebicsa);
+	/* Enable CS3 */
+	csa = at91_sys_read(AT91_MATRIX_EBICSA);
+	at91_sys_write(AT91_MATRIX_EBICSA,
+		csa | AT91_MATRIX_CS3A_SMC_SMARTMEDIA);
 
 	/* Configure SMC CS3 for NAND/SmartMedia */
-	writel(AT91_SMC_SETUP_NWE(1) | AT91_SMC_SETUP_NCS_WR(0) |
-		AT91_SMC_SETUP_NRD(1) | AT91_SMC_SETUP_NCS_RD(0),
-		&smc->cs[3].setup);
-	writel(AT91_SMC_PULSE_NWE(3) | AT91_SMC_PULSE_NCS_WR(3) |
-		AT91_SMC_PULSE_NRD(3) | AT91_SMC_PULSE_NCS_RD(3),
-		&smc->cs[3].pulse);
-	writel(AT91_SMC_CYCLE_NWE(5) | AT91_SMC_CYCLE_NRD(5),
-		&smc->cs[3].cycle);
-	writel(AT91_SMC_MODE_RM_NRD | AT91_SMC_MODE_WM_NWE |
-		AT91_SMC_MODE_EXNW_DISABLE |
-		AT91_SMC_MODE_DBW_8 |
-		AT91_SMC_MODE_TDF_CYCLE(2),
-		&smc->cs[3].mode);
+	at91_sys_write(AT91_SMC_SETUP(3),
+		AT91_SMC_NWESETUP_(1) | AT91_SMC_NCS_WRSETUP_(0) |
+		AT91_SMC_NRDSETUP_(1) | AT91_SMC_NCS_RDSETUP_(0));
+	at91_sys_write(AT91_SMC_PULSE(3),
+		AT91_SMC_NWEPULSE_(3) | AT91_SMC_NCS_WRPULSE_(3) |
+		AT91_SMC_NRDPULSE_(3) | AT91_SMC_NCS_RDPULSE_(3));
+	at91_sys_write(AT91_SMC_CYCLE(3),
+		AT91_SMC_NWECYCLE_(5) | AT91_SMC_NRDCYCLE_(5));
+	at91_sys_write(AT91_SMC_MODE(3),
+		AT91_SMC_READMODE | AT91_SMC_WRITEMODE |
+		AT91_SMC_EXNWMODE_DISABLE |
+		AT91_SMC_DBW_8 |
+		AT91_SMC_TDF_(2));
 
 	/* Configure RDY/BSY */
 	at91_set_gpio_input(CONFIG_SYS_NAND_READY_PIN, 1);
@@ -82,10 +80,8 @@ static void nand_hw_init(void)
 #ifdef CONFIG_MACB
 static void macb_hw_init(void)
 {
-	struct at91_pmc *pmc = (struct at91_pmc *)ATMEL_BASE_PMC;
-
 	/* Enable EMAC clock */
-	writel(1 << ATMEL_ID_EMAC0, &pmc->pcer);
+	at91_sys_write(AT91_PMC_PCER, 1 << AT91SAM9260_ID_EMAC);
 
 	/* Initialize EMAC=MACB hardware */
 	at91_macb_hw_init();
@@ -96,30 +92,35 @@ static void macb_hw_init(void)
 /* this is a weak define that we are overriding */
 int board_mmc_init(bd_t *bd)
 {
-	struct at91_pmc *pmc = (struct at91_pmc *)ATMEL_BASE_PMC;
-
 	/* Enable MCI clock */
-	writel(1 << ATMEL_ID_MCI, &pmc->pcer);
+	at91_sys_write(AT91_PMC_PCER, 1 << AT91SAM9260_ID_MCI);
 
 	/* Initialize MCI hardware */
 	at91_mci_hw_init();
 
 	/* This calls the atmel_mmc_init in gen_atmel_mci.c */
-	return atmel_mci_init((void *)ATMEL_BASE_MCI);
+	return atmel_mci_init((void *)AT91_BASE_MCI);
 }
 
 /* this is a weak define that we are overriding */
-int board_mmc_getcd(struct mmc *mmc)
+int board_mmc_getcd(u8 *cd, struct mmc *mmc)
 {
-	return !at91_get_gpio_value(CONFIG_SYS_MMC_CD_PIN);
+	/*
+	 * the only currently existing use of this function
+	 * (fsl_esdhc.c) suggests this function must return
+	 * *cs = TRUE if a card is NOT detected -> in most
+	 * cases the value of the pin when the detect switch
+	 * closes to GND
+	 */
+	*cd = at91_get_gpio_value(CONFIG_SYS_MMC_CD_PIN) ? 1 : 0;
+	return 0;
 }
 
 #endif
 
 int board_early_init_f(void)
 {
-	struct at91_shdwn *shdwn = (struct at91_shdwn *)ATMEL_BASE_SHDWN;
-	struct at91_pmc *pmc = (struct at91_pmc *)ATMEL_BASE_PMC;
+	struct at91_shdwn *shdwn = (struct at91_shdwn *)AT91_SHDWN_BASE;
 
 	/*
 	 * make sure the board can be powered on by
@@ -129,9 +130,9 @@ int board_early_init_f(void)
 		&shdwn->mr);
 
 	/* Enable clocks for all PIOs */
-	writel((1 << ATMEL_ID_PIOA) | (1 << ATMEL_ID_PIOB) |
-		(1 << ATMEL_ID_PIOC),
-		&pmc->pcer);
+	at91_sys_write(AT91_PMC_PCER, 1 << AT91SAM9260_ID_PIOA);
+	at91_sys_write(AT91_PMC_PCER, 1 << AT91SAM9260_ID_PIOB);
+	at91_sys_write(AT91_PMC_PCER, 1 << AT91SAM9260_ID_PIOC);
 
 	/* set SCL0 and SDA0 to open drain */
 	at91_set_pio_output(I2C0_PORT, SCL0_PIN, 1);
@@ -158,7 +159,7 @@ int board_init(void)
 	/* adress of boot parameters */
 	gd->bd->bi_boot_params = CONFIG_SYS_SDRAM_BASE + 0x100;
 
-	at91_seriald_hw_init();
+	at91_serial_hw_init();
 #ifdef CONFIG_CMD_NAND
 	nand_hw_init();
 #endif
@@ -210,7 +211,7 @@ int board_eth_init(bd_t *bis)
 	int num = 0;
 #ifdef CONFIG_MACB
 	rc = macb_eth_initialize(0,
-		(void *)ATMEL_BASE_EMAC0,
+		(void *)AT91_EMAC_BASE,
 		CONFIG_SYS_PHY_ID);
 	if (!rc)
 		num++;

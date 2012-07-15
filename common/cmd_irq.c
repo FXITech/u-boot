@@ -28,7 +28,7 @@ int do_interrupts(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 
 	if (argc != 2)
-		return CMD_RET_USAGE;
+		return cmd_usage(cmdtp);
 
 	/* on */
 	if (strncmp(argv[1], "on", 2) == 0)

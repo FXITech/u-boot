@@ -30,5 +30,4 @@ PLATFORM_CPPFLAGS += -march=armv5te -mtune=xscale
 # Supply options according to compiler version
 #
 # ========================================================================
-PF_RELFLAGS_SLB_AT := $(call cc-option,-mshort-load-bytes,$(call cc-option,-malignment-traps,))
-PLATFORM_RELFLAGS += $(PF_RELFLAGS_SLB_AT)
+PLATFORM_RELFLAGS +=$(call cc-option,-mshort-load-bytes,$(call cc-option,-malignment-traps,))

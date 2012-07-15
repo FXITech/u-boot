@@ -28,10 +28,8 @@ endif
 
 LIB	= $(obj)lib$(BOARD).o
 
-COBJS	= $(BOARD).o cmd_mip405.o \
-		../common/pci.o \
-		../common/usb_uhci.o \
-		../common/common_util.o
+COBJS	= $(BOARD).o ../common/flash.o cmd_mip405.o ../common/pci.o \
+			../common/usb_uhci.o ../common/common_util.o
 
 SOBJS	= init.o
 
@@ -41,6 +39,12 @@ SOBJS	:= $(addprefix $(obj),$(SOBJS))
 
 $(LIB):	$(OBJS) $(SOBJS)
 	$(call cmd_link_o_target, $(OBJS) $(SOBJS))
+
+clean:
+	rm -f $(SOBJS) $(OBJS)
+
+distclean:	clean
+	rm -f $(LIB) core *.bak $(obj).depend
 
 #########################################################################
 

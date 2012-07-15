@@ -29,7 +29,6 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-#ifndef CONFIG_ENV_IS_NOWHERE
 static char* entries_to_keep[] = {
 	"serial#", "ethaddr", "eth1addr", "model_info", "sensor_cnt",
 	"fpgadatasize", "ddr_size", "use_dhcp", "use_static_ipaddr",
@@ -68,7 +67,6 @@ void mv_reset_environment(void)
 
 	saveenv();
 }
-#endif
 
 int mv_load_fpga(void)
 {
@@ -95,7 +93,7 @@ int mv_load_fpga(void)
 
 	result = fpga_load(0, fpga_data, data_size);
 	if (!result)
-		bootstage_mark(BOOTSTAGE_ID_START);
+		show_boot_progress(0);
 
 	return result;
 }

@@ -82,9 +82,7 @@
 /*
  * Device / Head Register Bits
  */
-#ifndef ATA_DEVICE
 #define ATA_DEVICE(x)	((x & 1)<<4)
-#endif /* ATA_DEVICE */
 #define ATA_LBA		0xE0
 
 /*

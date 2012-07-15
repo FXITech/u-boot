@@ -25,7 +25,6 @@
 
 #include "qe.h"
 #include "uccf.h"
-#include <phy.h>
 #include <asm/fsl_enet.h>
 
 #define MAX_TX_THREADS				8
@@ -692,7 +691,7 @@ typedef struct uec_info {
 	u16				rx_bd_ring_len;
 	u16				tx_bd_ring_len;
 	u8				phy_address;
-	phy_interface_t			enet_interface_type;
+	enum fsl_phy_enet_if		enet_interface_type;
 	int				speed;
 } uec_info_t;
 

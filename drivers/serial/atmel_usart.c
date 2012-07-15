@@ -23,7 +23,21 @@
 
 #include <asm/io.h>
 #include <asm/arch/clk.h>
-#include <asm/arch/hardware.h>
+#include <asm/arch/memory-map.h>
+
+#if defined(CONFIG_USART0)
+# define USART_ID	0
+# define USART_BASE	USART0_BASE
+#elif defined(CONFIG_USART1)
+# define USART_ID	1
+# define USART_BASE	USART1_BASE
+#elif defined(CONFIG_USART2)
+# define USART_ID	2
+# define USART_BASE	USART2_BASE
+#elif defined(CONFIG_USART3)
+# define USART_ID	3
+# define USART_BASE	USART3_BASE
+#endif
 
 #include "atmel_usart.h"
 
@@ -31,7 +45,7 @@ DECLARE_GLOBAL_DATA_PTR;
 
 void serial_setbrg(void)
 {
-	atmel_usart3_t *usart = (atmel_usart3_t *)CONFIG_USART_BASE;
+	atmel_usart3_t *usart = (atmel_usart3_t*)USART_BASE;
 	unsigned long divisor;
 	unsigned long usart_hz;
 
@@ -40,14 +54,14 @@ void serial_setbrg(void)
 	 * Baud Rate = --------------
 	 *                16 * CD
 	 */
-	usart_hz = get_usart_clk_rate(CONFIG_USART_ID);
+	usart_hz = get_usart_clk_rate(USART_ID);
 	divisor = (usart_hz / 16 + gd->baudrate / 2) / gd->baudrate;
 	writel(USART3_BF(CD, divisor), &usart->brgr);
 }
 
 int serial_init(void)
 {
-	atmel_usart3_t *usart = (atmel_usart3_t *)CONFIG_USART_BASE;
+	atmel_usart3_t *usart = (atmel_usart3_t*)USART_BASE;
 
 	writel(USART3_BIT(RSTRX) | USART3_BIT(RSTTX), &usart->cr);
 
@@ -66,7 +80,7 @@ int serial_init(void)
 
 void serial_putc(char c)
 {
-	atmel_usart3_t *usart = (atmel_usart3_t *)CONFIG_USART_BASE;
+	atmel_usart3_t *usart = (atmel_usart3_t*)USART_BASE;
 
 	if (c == '\n')
 		serial_putc('\r');
@@ -83,7 +97,7 @@ void serial_puts(const char *s)
 
 int serial_getc(void)
 {
-	atmel_usart3_t *usart = (atmel_usart3_t *)CONFIG_USART_BASE;
+	atmel_usart3_t *usart = (atmel_usart3_t*)USART_BASE;
 
 	while (!(readl(&usart->csr) & USART3_BIT(RXRDY)))
 		 WATCHDOG_RESET();
@@ -92,6 +106,6 @@ int serial_getc(void)
 
 int serial_tstc(void)
 {
-	atmel_usart3_t *usart = (atmel_usart3_t *)CONFIG_USART_BASE;
+	atmel_usart3_t *usart = (atmel_usart3_t*)USART_BASE;
 	return (readl(&usart->csr) & USART3_BIT(RXRDY)) != 0;
 }

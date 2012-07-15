@@ -34,6 +34,8 @@
 
 #if defined(CONFIG_CMD_BSP)
 
+extern int do_bootm (cmd_tbl_t *, int, int, char *[]);
+
 /*
  * Command loadpci: wait for signal from host and boot image.
  */
@@ -42,6 +44,7 @@ int do_loadpci(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	unsigned int *ptr = 0;
 	int count = 0;
 	int count2 = 0;
+	int status;
 	int i;
 	char addr[16];
 	char str[] = "\\|/-";
@@ -98,7 +101,7 @@ int do_loadpci(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 
 		local_args[0] = argv[0];
 		local_args[1] = NULL;
-		do_bootm (cmdtp, 0, 1, local_args);
+		status = do_bootm (cmdtp, 0, 1, local_args);
 	}
 
 	return 0;

@@ -38,7 +38,6 @@
 #include <asm/arch/systimer.h>
 #include <asm/arch/sysctrl.h>
 #include <asm/arch/wdt.h>
-#include "../drivers/mmc/arm_pl180_mmci.h"
 
 static ulong timestamp;
 static ulong lastdec;
@@ -83,15 +82,6 @@ int board_eth_init(bd_t *bis)
 	int rc = 0;
 #ifdef CONFIG_SMC911X
 	rc = smc911x_initialize(0, CONFIG_SMC911X_BASE);
-#endif
-	return rc;
-}
-
-int cpu_mmc_init(bd_t *bis)
-{
-	int rc = 0;
-#ifdef CONFIG_ARM_PL180_MMCI
-	rc = arm_pl180_mmci_init();
 #endif
 	return rc;
 }
@@ -199,6 +189,11 @@ void reset_timer_masked(void)
 	timestamp = 0;
 }
 
+void reset_timer(void)
+{
+	reset_timer_masked();
+}
+
 ulong get_timer_masked(void)
 {
 	ulong now = readl(&systimer_base->timer0value) / 1000;
@@ -225,14 +220,4 @@ void lowlevel_init(void)
 
 ulong get_board_rev(void){
 	return readl((u32 *)SYS_ID);
-}
-
-unsigned long long get_ticks(void)
-{
-	return get_timer(0);
-}
-
-ulong get_tbclk (void)
-{
-	return (ulong)CONFIG_SYS_HZ;
 }

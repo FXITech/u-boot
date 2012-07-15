@@ -35,6 +35,12 @@ u32 pkt_data_pull(struct eth_device *dev, u32 addr) \
 void pkt_data_push(struct eth_device *dev, u32 addr, u32 val) \
 	__attribute__ ((weak, alias ("smc911x_reg_write")));
 
+#define mdelay(n)       udelay((n)*1000)
+
+#if defined(CONFIG_S5P6450)
+DECLARE_GLOBAL_DATA_PTR;
+#endif
+
 static void smc911x_handle_mac_address(struct eth_device *dev)
 {
 	unsigned long addrh, addrl;
@@ -48,7 +54,7 @@ static void smc911x_handle_mac_address(struct eth_device *dev)
 	printf(DRIVERNAME ": MAC %pM\n", m);
 }
 
-static int smc911x_eth_phy_read(struct eth_device *dev,
+static int smc911x_miiphy_read(struct eth_device *dev,
 				u8 phy, u8 reg, u16 *val)
 {
 	while (smc911x_get_mac_csr(dev, MII_ACC) & MII_ACC_MII_BUSY)
@@ -65,7 +71,7 @@ static int smc911x_eth_phy_read(struct eth_device *dev,
 	return 0;
 }
 
-static int smc911x_eth_phy_write(struct eth_device *dev,
+static int smc911x_miiphy_write(struct eth_device *dev,
 				u8 phy, u8 reg, u16  val)
 {
 	while (smc911x_get_mac_csr(dev, MII_ACC) & MII_ACC_MII_BUSY)
@@ -101,11 +107,11 @@ static void smc911x_phy_configure(struct eth_device *dev)
 
 	smc911x_phy_reset(dev);
 
-	smc911x_eth_phy_write(dev, 1, MII_BMCR, BMCR_RESET);
+	smc911x_miiphy_write(dev, 1, PHY_BMCR, PHY_BMCR_RESET);
 	mdelay(1);
-	smc911x_eth_phy_write(dev, 1, MII_ADVERTISE, 0x01e1);
-	smc911x_eth_phy_write(dev, 1, MII_BMCR, BMCR_ANENABLE |
-				BMCR_ANRESTART);
+	smc911x_miiphy_write(dev, 1, PHY_ANAR, 0x01e1);
+	smc911x_miiphy_write(dev, 1, PHY_BMCR, PHY_BMCR_AUTON |
+				PHY_BMCR_RST_NEG);
 
 	timeout = 5000;
 	do {
@@ -113,9 +119,9 @@ static void smc911x_phy_configure(struct eth_device *dev)
 		if ((timeout--) == 0)
 			goto err_out;
 
-		if (smc911x_eth_phy_read(dev, 1, MII_BMSR, &status) != 0)
+		if (smc911x_miiphy_read(dev, 1, PHY_BMSR, &status) != 0)
 			goto err_out;
-	} while (!(status & BMSR_LSTATUS));
+	} while (!(status & PHY_BMSR_LS));
 
 	printf(DRIVERNAME ": phy initialized\n");
 
@@ -161,7 +167,8 @@ static int smc911x_init(struct eth_device *dev, bd_t * bd)
 	return 0;
 }
 
-static int smc911x_send(struct eth_device *dev, void *packet, int length)
+static int smc911x_send(struct eth_device *dev,
+			volatile void *packet, int length)
 {
 	u32 *data = (u32*)packet;
 	u32 tmplen;
@@ -209,7 +216,19 @@ static int smc911x_rx(struct eth_device *dev)
 {
 	u32 *data = (u32 *)NetRxPackets[0];
 	u32 pktlen, tmplen;
-	u32 status;
+	u32 status, tmp, i;
+
+	/* workaround: delay for rx packet should be added here.
+	 * because NetLoop does not guarantee the RX packet delay.
+	 */
+	for (i=0; i<0x100000; i++) {
+		if ((smc911x_reg_read(dev, RX_FIFO_INF) & RX_FIFO_INF_RXSUSED) >> 16)
+			break;
+	}
+	if (i > (0x100000-1)) {
+		printf("%s: timeout in RX\n", DRIVERNAME);
+		return -1;
+	}
 
 	if ((smc911x_reg_read(dev, RX_FIFO_INF) & RX_FIFO_INF_RXSUSED) >> 16) {
 		status = smc911x_reg_read(dev, RX_STATUS_FIFO);
@@ -231,25 +250,6 @@ static int smc911x_rx(struct eth_device *dev)
 
 	return 0;
 }
-
-#if defined(CONFIG_MII) || defined(CONFIG_CMD_MII)
-/* wrapper for smc911x_eth_phy_read */
-static int smc911x_miiphy_read(const char *devname, u8 phy, u8 reg, u16 *val)
-{
-	struct eth_device *dev = eth_get_dev_by_name(devname);
-	if (dev)
-		return smc911x_eth_phy_read(dev, phy, reg, val);
-	return -1;
-}
-/* wrapper for smc911x_eth_phy_write */
-static int smc911x_miiphy_write(const char *devname, u8 phy, u8 reg, u16 val)
-{
-	struct eth_device *dev = eth_get_dev_by_name(devname);
-	if (dev)
-		return smc911x_eth_phy_write(dev, phy, reg, val);
-	return -1;
-}
-#endif
 
 int smc911x_initialize(u8 dev_num, int base_addr)
 {
@@ -289,10 +289,5 @@ int smc911x_initialize(u8 dev_num, int base_addr)
 	sprintf(dev->name, "%s-%hu", DRIVERNAME, dev_num);
 
 	eth_register(dev);
-
-#if defined(CONFIG_MII) || defined(CONFIG_CMD_MII)
-	miiphy_register(dev->name, smc911x_miiphy_read, smc911x_miiphy_write);
-#endif
-
 	return 1;
 }

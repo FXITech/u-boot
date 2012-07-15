@@ -342,8 +342,7 @@ U_BOOT_CMD(
 
 #if defined(CONFIG_PRAM)
 #include <environment.h>
-#include <search.h>
-#include <errno.h>
+extern env_t *env_ptr;
 
 int do_painit(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
@@ -351,10 +350,6 @@ int do_painit(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	char *v;
 	u32 param;
 	ulong *lptr;
-
-	env_t *envp;
-	char *res;
-	int len;
 
 	v = getenv("pram");
 	if (v)
@@ -373,7 +368,7 @@ int do_painit(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	 */
 	param = base - (pram << 10);
 	printf("PARAM: @%08x\n", param);
-	debug("memsize=0x%08x, base=0x%08x\n", (u32)gd->bd->bi_memsize, base);
+	debug("memsize=0x%08x, base=0x%08x\n", gd->bd->bi_memsize, base);
 
 	/* clear entire PA ram */
 	memset((void*)param, 0, (pram << 10));
@@ -389,15 +384,7 @@ int do_painit(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 
 	/* env is first (4k aligned) */
 	nextbase -= ((CONFIG_ENV_SIZE + 4096 - 1) & ~(4096 - 1));
-	envp = (env_t *)nextbase;
-	res = (char *)envp->data;
-	len = hexport_r(&env_htab, '\0', &res, ENV_SIZE, 0, NULL);
-	if (len < 0) {
-		error("Cannot export environment: errno = %d\n", errno);
-		return 1;
-	}
-	envp->crc = crc32(0, envp->data, ENV_SIZE);
-
+	memcpy((void*)nextbase, env_ptr, CONFIG_ENV_SIZE);
 	*(--lptr) = CONFIG_ENV_SIZE;     /* size */
 	*(--lptr) = base - nextbase;  /* offset | type=0 */
 

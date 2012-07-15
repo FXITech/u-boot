@@ -78,6 +78,7 @@
 
 #define CONFIG_SYS_XLB_PIPELINING	1
 
+#undef CONFIG_NET_MULTI
 #undef CONFIG_EEPRO100
 
 /* Partitions */
@@ -286,6 +287,9 @@
  */
 #define CONFIG_SYS_HUSH_PARSER
 #define CONFIG_CMDLINE_EDITING	1
+#ifdef CONFIG_SYS_HUSH_PARSER
+#define CONFIG_SYS_PROMPT_HUSH_PS2	"> "
+#endif
 #define CONFIG_SYS_LONGHELP			/* undef to save memory	    */
 #define CONFIG_SYS_PROMPT		"=> "	/* Monitor Command Prompt   */
 #if defined(CONFIG_CMD_KGDB)

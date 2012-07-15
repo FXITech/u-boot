@@ -32,7 +32,7 @@
 #define CONFIG_SYS_TEXT_BASE		0xC1F00000
 
 /* we will never enable dcache, because we have to setup MMU first */
-#define CONFIG_SYS_DCACHE_OFF
+#define CONFIG_SYS_NO_DCACHE
 #undef CONFIG_USE_IRQ
 
 /* Console setting */

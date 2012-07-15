@@ -25,28 +25,76 @@
 
 #include <common.h>
 #include <asm/io.h>
+#include <asm/arch/cpu.h>
 #include <asm/arch/pwm.h>
 #include <asm/arch/clk.h>
-#include <pwm.h>
 
-DECLARE_GLOBAL_DATA_PTR;
+#define PRESCALER_1		(16 - 1)	/* prescaler of timer 2, 3, 4 */
+#define MUX_DIV_2		1		/* 1/2 period */
+#define MUX_DIV_4		2		/* 1/4 period */
+#define MUX_DIV_8		3		/* 1/8 period */
+#define MUX_DIV_16		4		/* 1/16 period */
+#define MUX4_DIV_SHIFT		16
 
-unsigned long get_current_tick(void);
+#define TCON_TIMER4_SHIFT	20
+
+static unsigned long count_value;
+
+/* Internal tick units */
+static unsigned long long timestamp;	/* Monotonic incrementing timer */
+static unsigned long lastdec;		/* Last decremneter snapshot */
 
 /* macro to read the 16 bit timer */
+
 static inline struct s5p_timer *s5p_get_base_timer(void)
 {
+	//return (struct s5p_timer *)samsung_get_base_timer();
+#if defined(CONFIG_ARCH_EXYNOS)
 	return (struct s5p_timer *)samsung_get_base_timer();
+#elif defined(CONFIG_S5PC210)
+	return (struct s5p_timer *)0x139D0000;
+#elif defined(CONFIG_S5PC110)
+	return (struct s5p_timer *)0xE2500000;
+#endif
 }
 
 int timer_init(void)
 {
-	/* PWM Timer 4 */
-	pwm_init(4, MUX_DIV_2, 0);
-	pwm_config(4, 0, 0);
-	pwm_enable(4);
+	struct s5p_timer *const timer = s5p_get_base_timer();
+	u32 val;
 
-	reset_timer_masked();
+	/*
+	 * @ PWM Timer 4
+	 * Timer Freq(HZ) =
+	 *	PWM_CLK / { (prescaler_value + 1) * (divider_value) }
+	 */
+
+	/* set prescaler : 16 */
+	/* set divider : 2 */
+	writel((PRESCALER_1 & 0xff) << 8, &timer->tcfg0);
+	writel((MUX_DIV_2 & 0xf) << MUX4_DIV_SHIFT, &timer->tcfg1);
+	/* count_value = 2085937.5(HZ) (per 1 sec)*/
+	//count_value = get_pwm_clk() / ((PRESCALER_1 + 1) *
+	//		(MUX_DIV_2 + 1));
+	count_value = 2500000;
+
+	/* count_value / 100 = 20859.375(HZ) (per 10 msec) */
+	count_value = count_value / 100;
+
+	/* set count value */
+	writel(count_value, &timer->tcntb4);
+	lastdec = count_value;
+
+	val = (readl(&timer->tcon) & ~(0x07 << TCON_TIMER4_SHIFT)) |
+		TCON4_AUTO_RELOAD;
+
+	/* auto reload & manual update */
+	writel(val | TCON4_UPDATE, &timer->tcon);
+
+	/* start PWM timer 4 */
+	writel(val | TCON4_START, &timer->tcon);
+
+	timestamp = 0;
 
 	return 0;
 }
@@ -54,16 +102,26 @@ int timer_init(void)
 /*
  * timer without interrupts
  */
+void reset_timer(void)
+{
+	reset_timer_masked();
+}
+
 unsigned long get_timer(unsigned long base)
 {
 	return get_timer_masked() - base;
+}
+
+void set_timer(unsigned long t)
+{
+	timestamp = t;
 }
 
 /* delay x useconds */
 void __udelay(unsigned long usec)
 {
 	struct s5p_timer *const timer = s5p_get_base_timer();
-	unsigned long tmo, tmp, count_value;
+	unsigned long tmo, tmp;
 
 	count_value = readl(&timer->tcntb4);
 
@@ -76,19 +134,19 @@ void __udelay(unsigned long usec)
 		 * 3. finish normalize.
 		 */
 		tmo = usec / 1000;
-		tmo *= (CONFIG_SYS_HZ * count_value);
+		tmo *= (CONFIG_SYS_HZ * count_value / 10);
 		tmo /= 1000;
 	} else {
 		/* else small number, don't kill it prior to HZ multiply */
-		tmo = usec * CONFIG_SYS_HZ * count_value;
+		tmo = usec * CONFIG_SYS_HZ * count_value / 10;
 		tmo /= (1000 * 1000);
 	}
 
 	/* get current timestamp */
-	tmp = get_current_tick();
+	tmp = get_timer(0);
 
 	/* if setting this fordward will roll time stamp */
-	/* reset "advancing" timestamp to 0, set lastinc value */
+	/* reset "advancing" timestamp to 0, set lastdec value */
 	/* else, set advancing stamp wake up time */
 	if ((tmo + tmp + 1) < tmp)
 		reset_timer_masked();
@@ -96,7 +154,7 @@ void __udelay(unsigned long usec)
 		tmo += tmp;
 
 	/* loop till event */
-	while (get_current_tick() < tmo)
+	while (get_timer_masked() < tmo)
 		;	/* nop */
 }
 
@@ -105,32 +163,23 @@ void reset_timer_masked(void)
 	struct s5p_timer *const timer = s5p_get_base_timer();
 
 	/* reset time */
-	gd->lastinc = readl(&timer->tcnto4);
-	gd->tbl = 0;
+	lastdec = readl(&timer->tcnto4);
+	timestamp = 0;
 }
 
 unsigned long get_timer_masked(void)
 {
 	struct s5p_timer *const timer = s5p_get_base_timer();
-	unsigned long count_value = readl(&timer->tcntb4);
-
-	return get_current_tick() / count_value;
-}
-
-unsigned long get_current_tick(void)
-{
-	struct s5p_timer *const timer = s5p_get_base_timer();
 	unsigned long now = readl(&timer->tcnto4);
-	unsigned long count_value = readl(&timer->tcntb4);
 
-	if (gd->lastinc >= now)
-		gd->tbl += gd->lastinc - now;
+	if (lastdec >= now)
+		timestamp += lastdec - now;
 	else
-		gd->tbl += gd->lastinc + count_value - now;
+		timestamp += lastdec + count_value - now;
 
-	gd->lastinc = now;
+	lastdec = now;
 
-	return gd->tbl;
+	return timestamp;
 }
 
 /*

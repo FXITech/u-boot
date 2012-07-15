@@ -63,12 +63,13 @@ const static unsigned long otherpattern = 0x01234567;
 /* test write/read og a given LIME Register */
 static int gdc_test_reg_one(uint value)
 {
+	int ret;
 	uint read_value;
 
 	/* write test pattern */
 	out_be32((void *)GDC_SCRATCH_REG, value);
 	/* read other location (protect against data lines capacity) */
-	in_be32((void *)GDC_RAM_START);
+	ret = in_be32((void *)GDC_RAM_START);
 	/* verify test pattern */
 	read_value = in_be32((void *)GDC_SCRATCH_REG);
 	if (read_value != value) {

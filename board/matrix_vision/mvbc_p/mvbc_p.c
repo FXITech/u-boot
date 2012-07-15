@@ -241,16 +241,16 @@ void show_boot_progress(int val)
 	struct mpc5xxx_gpio *gpio = (struct mpc5xxx_gpio*)MPC5XXX_GPIO;
 
 	switch(val) {
-	case BOOTSTAGE_ID_START: /* FPGA ok */
+	case 0: /* FPGA ok */
 		setbits_be32(&gpio->simple_dvo, LED_G0);
 		break;
-	case BOOTSTAGE_ID_NET_ETH_INIT:
+	case 65:
 		setbits_be32(&gpio->simple_dvo, LED_G1);
 		break;
-	case BOOTSTAGE_ID_COPY_RAMDISK:
+	case 12:
 		setbits_be32(&gpio->simple_dvo, LED_Y);
 		break;
-	case BOOTSTAGE_ID_RUN_OS:
+	case 15:
 		setbits_be32(&gpio->simple_dvo, LED_R);
 		break;
 	default:

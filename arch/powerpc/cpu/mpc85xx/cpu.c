@@ -1,5 +1,5 @@
 /*
- * Copyright 2004,2007-2011 Freescale Semiconductor, Inc.
+ * Copyright 2004,2007-2010 Freescale Semiconductor, Inc.
  * (C) Copyright 2002, 2003 Motorola Inc.
  * Xianghua Xiao (X.Xiao@motorola.com)
  *
@@ -33,29 +33,18 @@
 #include <asm/cache.h>
 #include <asm/io.h>
 #include <asm/mmu.h>
-#include <asm/fsl_ifc.h>
 #include <asm/fsl_law.h>
-#include <asm/fsl_lbc.h>
 #include <post.h>
 #include <asm/processor.h>
 #include <asm/fsl_ddr_sdram.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
-/*
- * Default board reset function
- */
-static void
-__board_reset(void)
-{
-	/* Do nothing */
-}
-void board_reset(void) __attribute__((weak, alias("__board_reset")));
-
 int checkcpu (void)
 {
 	sys_info_t sysinfo;
 	uint pvr, svr;
+	uint fam;
 	uint ver;
 	uint major, minor;
 	struct cpu_type *cpu;
@@ -74,11 +63,13 @@ int checkcpu (void)
 	u32 ddr_ratio = 0;
 #endif /* CONFIG_FSL_CORENET */
 #endif /* CONFIG_DDR_CLK_FREQ */
-	unsigned int i, core, nr_cores = cpu_numcores();
-	u32 mask = cpu_mask();
+	int i;
 
 	svr = get_svr();
 	major = SVR_MAJ(svr);
+#ifdef CONFIG_MPC8536
+	major &= 0x7; /* the msb of this nibble is a mfg code */
+#endif
 	minor = SVR_MIN(svr);
 
 	if (cpu_numcores() > 1) {
@@ -101,25 +92,30 @@ int checkcpu (void)
 	printf(", Version: %d.%d, (0x%08x)\n", major, minor, svr);
 
 	pvr = get_pvr();
+	fam = PVR_FAM(pvr);
 	ver = PVR_VER(pvr);
 	major = PVR_MAJ(pvr);
 	minor = PVR_MIN(pvr);
 
 	printf("Core:  ");
-	switch(ver) {
-	case PVR_VER_E500_V1:
-	case PVR_VER_E500_V2:
-		puts("E500");
-		break;
-	case PVR_VER_E500MC:
-		puts("E500MC");
-		break;
-	case PVR_VER_E5500:
-		puts("E5500");
-		break;
-	default:
+	if (PVR_FAM(PVR_85xx)) {
+		switch(PVR_MEM(pvr)) {
+		case 0x1:
+		case 0x2:
+			puts("E500");
+			break;
+		case 0x3:
+			puts("E500MC");
+			break;
+		case 0x4:
+			puts("E5500");
+			break;
+		default:
+			puts("Unknown");
+			break;
+		}
+	} else {
 		puts("Unknown");
-		break;
 	}
 
 	printf(", Version: %d.%d, (0x%08x)\n", major, minor, pvr);
@@ -127,11 +123,11 @@ int checkcpu (void)
 	get_sys_info(&sysinfo);
 
 	puts("Clock Configuration:");
-	for_each_cpu(i, core, nr_cores, mask) {
+	for (i = 0; i < cpu_numcores(); i++) {
 		if (!(i & 3))
 			printf ("\n       ");
-		printf("CPU%d:%-4s MHz, ", core,
-			strmhz(buf1, sysinfo.freqProcessor[core]));
+		printf("CPU%d:%-4s MHz, ",
+				i,strmhz(buf1, sysinfo.freqProcessor[i]));
 	}
 	printf("\n       CCB:%-4s MHz,\n", strmhz(buf1, sysinfo.freqSystemBus));
 
@@ -169,14 +165,12 @@ int checkcpu (void)
 	}
 #endif
 
-#if defined(CONFIG_FSL_LBC)
 	if (sysinfo.freqLocalBus > LCRR_CLKDIV) {
 		printf("LBC:%-4s MHz\n", strmhz(buf1, sysinfo.freqLocalBus));
 	} else {
 		printf("LBC: unknown (LCRR[CLKDIV] = 0x%02lx)\n",
 		       sysinfo.freqLocalBus);
 	}
-#endif
 
 #ifdef CONFIG_CPM2
 	printf("CPM:   %s MHz\n", strmhz(buf1, sysinfo.freqSystemBus));
@@ -205,7 +199,7 @@ int checkcpu (void)
 
 /* ------------------------------------------------------------------------- */
 
-int do_reset (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+int do_reset (cmd_tbl_t *cmdtp, bd_t *bd, int flag, int argc, char * const argv[])
 {
 /* Everything after the first generation of PQ3 parts has RSTCR */
 #if defined(CONFIG_MPC8540) || defined(CONFIG_MPC8541) || \
@@ -225,12 +219,7 @@ int do_reset (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	mtspr(DBCR0,val);
 #else
 	volatile ccsr_gur_t *gur = (void *)(CONFIG_SYS_MPC85xx_GUTS_ADDR);
-
-	/* Attempt board-specific reset */
-	board_reset();
-
-	/* Next try asserting HRESET_REQ */
-	out_be32(&gur->rstcr, 0x2);
+	out_be32(&gur->rstcr, 0x2);	/* HRESET_REQ */
 	udelay(100);
 #endif
 
@@ -241,14 +230,13 @@ int do_reset (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 /*
  * Get timebase clock frequency
  */
-#ifndef CONFIG_SYS_FSL_TBCLK_DIV
-#define CONFIG_SYS_FSL_TBCLK_DIV 8
-#endif
 unsigned long get_tbclk (void)
 {
-	unsigned long tbclk_div = CONFIG_SYS_FSL_TBCLK_DIV;
-
-	return (gd->bus_clk + (tbclk_div >> 1)) / tbclk_div;
+#ifdef CONFIG_FSL_CORENET
+	return (gd->bus_clk + 8) / 16;
+#else
+	return (gd->bus_clk + 4UL)/8UL;
+#endif
 }
 
 
@@ -289,87 +277,14 @@ int cpu_mmc_init(bd_t *bis)
 
 /*
  * Print out the state of various machine registers.
- * Currently prints out LAWs, BR0/OR0 for LBC, CSPR/CSOR/Timing
- * parameters for IFC and TLBs
+ * Currently prints out LAWs, BR0/OR0, and TLBs
  */
 void mpc85xx_reginfo(void)
 {
 	print_tlbcam();
 	print_laws();
-#if defined(CONFIG_FSL_LBC)
 	print_lbc_regs();
-#endif
-#ifdef CONFIG_FSL_IFC
-	print_ifc_regs();
-#endif
-
 }
-
-/* Common ddr init for non-corenet fsl 85xx platforms */
-#ifndef CONFIG_FSL_CORENET
-#if defined(CONFIG_SYS_RAMBOOT) && !defined(CONFIG_SYS_INIT_L2_ADDR)
-phys_size_t initdram(int board_type)
-{
-#if defined(CONFIG_SPD_EEPROM) || defined(CONFIG_DDR_SPD)
-	return fsl_ddr_sdram_size();
-#else
-	return CONFIG_SYS_SDRAM_SIZE * 1024 * 1024;
-#endif
-}
-#else /* CONFIG_SYS_RAMBOOT */
-phys_size_t initdram(int board_type)
-{
-	phys_size_t dram_size = 0;
-
-#if defined(CONFIG_SYS_FSL_ERRATUM_DDR_MSYNC_IN)
-	{
-		ccsr_gur_t *gur = (void *)(CONFIG_SYS_MPC85xx_GUTS_ADDR);
-		unsigned int x = 10;
-		unsigned int i;
-
-		/*
-		 * Work around to stabilize DDR DLL
-		 */
-		out_be32(&gur->ddrdllcr, 0x81000000);
-		asm("sync;isync;msync");
-		udelay(200);
-		while (in_be32(&gur->ddrdllcr) != 0x81000100) {
-			setbits_be32(&gur->devdisr, 0x00010000);
-			for (i = 0; i < x; i++)
-				;
-			clrbits_be32(&gur->devdisr, 0x00010000);
-			x++;
-		}
-	}
-#endif
-
-#if	defined(CONFIG_SPD_EEPROM)	|| \
-	defined(CONFIG_DDR_SPD)		|| \
-	defined(CONFIG_SYS_DDR_RAW_TIMING)
-	dram_size = fsl_ddr_sdram();
-#else
-	dram_size = fixed_sdram();
-#endif
-	dram_size = setup_ddr_tlbs(dram_size / 0x100000);
-	dram_size *= 0x100000;
-
-#if defined(CONFIG_DDR_ECC) && !defined(CONFIG_ECC_INIT_VIA_DDRCONTROLLER)
-	/*
-	 * Initialize and enable DDR ECC.
-	 */
-	ddr_enable_ecc(dram_size);
-#endif
-
-#if defined(CONFIG_FSL_LBC)
-	/* Some boards also have sdram on the lbc */
-	lbc_sdram_init();
-#endif
-
-	debug("DDR: ");
-	return dram_size;
-}
-#endif /* CONFIG_SYS_RAMBOOT */
-#endif
 
 #if CONFIG_POST & CONFIG_SYS_POST_MEMORY
 
@@ -380,8 +295,6 @@ void read_tlbcam_entry(int idx, u32 *valid, u32 *tsize, unsigned long *epn,
 		       phys_addr_t *rpn);
 unsigned int
 	setup_ddr_tlbs_phys(phys_addr_t p_addr, unsigned int memsize_in_meg);
-
-void clear_ddr_tlbs_phys(phys_addr_t p_addr, unsigned int memsize_in_meg);
 
 static void dump_spd_ddr_reg(void)
 {
@@ -469,9 +382,19 @@ static int reset_tlb(phys_addr_t p_addr, u32 size, phys_addr_t *phys_offset)
 	u32 vstart = CONFIG_SYS_DDR_SDRAM_BASE;
 	unsigned long epn;
 	u32 tsize, valid, ptr;
+	phys_addr_t rpn = 0;
 	int ddr_esel;
 
-	clear_ddr_tlbs_phys(p_addr, size>>20);
+	ptr = vstart;
+
+	while (ptr < (vstart + size)) {
+		ddr_esel = find_tlb_idx((void *)ptr, 1);
+		if (ddr_esel != -1) {
+			read_tlbcam_entry(ddr_esel, &valid, &tsize, &epn, &rpn);
+			disable_tlb(ddr_esel);
+		}
+		ptr += TSIZE_TO_BYTES(tsize);
+	}
 
 	/* Setup new tlb to cover the physical address */
 	setup_ddr_tlbs_phys(p_addr, size>>20);

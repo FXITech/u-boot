@@ -27,7 +27,6 @@
 #include <common.h>
 #include <command.h>
 #include <asm/byteorder.h>
-#include <asm/zimage.h>
 
 #ifdef CONFIG_SYS_DEBUG
 static void hexdump(unsigned char *buf, int len)
@@ -43,6 +42,19 @@ static void hexdump(unsigned char *buf, int len)
 	printf("\n");
 }
 #endif
+
+#define MOUNT_ROOT_RDONLY	0x000
+#define RAMDISK_FLAGS		0x004
+#define ORIG_ROOT_DEV		0x008
+#define LOADER_TYPE			0x00c
+#define INITRD_START		0x010
+#define INITRD_SIZE			0x014
+#define COMMAND_LINE		0x100
+
+#define RD_PROMPT	(1<<15)
+#define RD_DOLOAD	(1<<14)
+#define CMD_ARG_RD_PROMPT	"prompt_ramdisk="
+#define CMD_ARG_RD_DOLOAD	"load_ramdisk="
 
 #ifdef CONFIG_SH_SDRAM_OFFSET
 #define GET_INITRD_START(initrd, linux) (initrd - linux + CONFIG_SH_SDRAM_OFFSET)
@@ -82,12 +94,13 @@ int do_bootm_linux(int flag, int argc, char * const argv[], bootm_headers_t *ima
 	if ((flag != 0) && (flag != BOOTM_STATE_OS_GO))
 		return 1;
 
-	/* Clear zero page */
-	memset(param, 0, size);
+	/* Setup parameters */
+	memset(param, 0, size);	/* Clear zero page */
 
 	/* Set commandline */
 	strcpy(cmdline, bootargs);
 
+	sh_check_cmd_arg(bootargs, CMD_ARG_RD_DOLOAD, 10);
 	/* Initrd */
 	if (images->rd_start || images->rd_end) {
 		unsigned long ramdisk_flags = 0;
@@ -115,7 +128,7 @@ int do_bootm_linux(int flag, int argc, char * const argv[], bootm_headers_t *ima
 
 	/* Boot kernel */
 	kernel();
-
 	/* does not return */
+
 	return 1;
 }

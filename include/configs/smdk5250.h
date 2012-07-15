@@ -1,7 +1,10 @@
 /*
- * Copyright (C) 2011 Samsung Electronics
+ * (C) Copyright 2009 Samsung Electronics
+ * Minkyu Kang <mk7.kang@samsung.com>
+ * HeungJun Kim <riverful.kim@samsung.com>
+ * Inki Dae <inki.dae@samsung.com>
  *
- * Configuration settings for the SAMSUNG SMDK5250 (EXYNOS5250) board.
+ * Configuation settings for the SAMSUNG SMDKC100 board.
  *
  * See file CREDITS for list of people who contributed to this
  * project.
@@ -25,182 +28,305 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
-/* High Level Configuration Options */
-#define CONFIG_SAMSUNG			/* in a SAMSUNG core */
-#define CONFIG_S5P			/* S5P Family */
-#define CONFIG_EXYNOS5			/* which is in a Exynos5 Family */
-#define CONFIG_SMDK5250			/* which is in a SMDK5250 */
+/*
+ * High Level Configuration Options
+ * (easy to change)
+ */
+#define CONFIG_ARMV7		1	/* This is an ARM V7 CPU core */
+#define CONFIG_SAMSUNG		1	/* in a SAMSUNG core */
+#define CONFIG_S5P		1	/* which is in a S5P Family */
+#define CONFIG_ARCH_EXYNOS      1       /* which is in a Exynos Family */
+#define CONFIG_ARCH_EXYNOS5     1       /* which is in a Exynos5 Family */
+#define CONFIG_CPU_EXYNOS5250   1       /* which is in a Exynos5250 */
+#define CONFIG_MACH_SMDK5250    1       /* which is in a SMDK5250 */
+#define CONFIG_EVT1		1	/* EVT1 */
+//#define CONFIG_CORTEXA5_ENABLE  1       /* enable coretex-A5(IOP) Booting */
 
-#include <asm/arch/cpu.h>		/* get chip and board defs */
+#define CONFIG_SECURE_BL1_ONLY
+//#define CONFIG_SECURE_BOOT
+#ifdef CONFIG_SECURE_BOOT
+#define CONFIG_S5PC210S
+#define CONFIG_SECURE_ROOTFS
+#define CONFIG_SECURE_KERNEL_BASE	0xc0008000
+#define CONFIG_SECURE_KERNEL_SIZE	0x200000
+#define CONFIG_SECURE_ROOTFS_BASE	0xc1000000
+#define CONFIG_SECURE_ROOTFS_SIZE	0x5c2000
+#endif
 
-#define CONFIG_ARCH_CPU_INIT
+//#include <asm/arch/cpu.h>		/* get chip and board defs */
+
+/* (Memory Interleaving Size = 1 << IV_SIZE) */
+#define CONFIG_IV_SIZE 0x07
+
+#define CONFIG_L2_OFF
+
+//#define CONFIG_ARCH_CPU_INIT
+
 #define CONFIG_DISPLAY_CPUINFO
-#define CONFIG_DISPLAY_BOARDINFO
-
-/* Keep L2 Cache Disabled */
-#define CONFIG_SYS_DCACHE_OFF
-
-#define CONFIG_SYS_SDRAM_BASE		0x40000000
-#define CONFIG_SYS_TEXT_BASE		0x43E00000
+//#define CONFIG_DISPLAY_BOARDINFO
+#define BOARD_LATE_INIT
 
 /* input clock of PLL: SMDK5250 has 24MHz input clock */
-#define CONFIG_SYS_CLK_FREQ		24000000
+#define CONFIG_SYS_CLK_FREQ	24000000
+
+/* DRAM Base */
+#define CONFIG_SYS_SDRAM_BASE		0x40000000
 
 #define CONFIG_SETUP_MEMORY_TAGS
 #define CONFIG_CMDLINE_TAG
 #define CONFIG_INITRD_TAG
 #define CONFIG_CMDLINE_EDITING
 
-/* MACH_TYPE_SMDK5250 macro will be removed once added to mach-types */
-#define MACH_TYPE_SMDK5250		3774
-#define CONFIG_MACH_TYPE		MACH_TYPE_SMDK5250
+/* Power Management is enabled */
+//#define CONFIG_PM
+//#define CONFIG_INVERSE_PMIC_I2C 1
+#define CONFIG_PM_VDD_ARM	1.1
+#define CONFIG_PM_VDD_INT	1.0
+#define CONFIG_PM_VDD_G3D	1.1
+#define CONFIG_PM_VDD_MIF	1.1
+#define CONFIG_PM_VDD_LDO14	1.8
 
-/* Power Down Modes */
-#define S5P_CHECK_SLEEP			0x00000BAD
-#define S5P_CHECK_DIDLE			0xBAD00000
-#define S5P_CHECK_LPA			0xABAD0000
-
-/* Offset for inform registers */
-#define INFORM0_OFFSET			0x800
-#define INFORM1_OFFSET			0x804
-
-/* Size of malloc() pool */
+/*
+ * Size of malloc() pool
+ * 1MB = 0x100000, 0x100000 = 1024 * 1024
+ */
 #define CONFIG_SYS_MALLOC_LEN		(CONFIG_ENV_SIZE + (1 << 20))
+						/* initial data */
+/*
+ * select serial console configuration
+ */
+#define CONFIG_SERIAL1			1
+#define CONFIG_SERIAL_MULTI		1
 
-/* select serial console configuration */
-#define CONFIG_SERIAL_MULTI
-#define CONFIG_SERIAL3			/* use SERIAL 3 */
-#define CONFIG_BAUDRATE			115200
-#define EXYNOS5_DEFAULT_UART_OFFSET	0x010000
+#define CONFIG_USB_OHCI
+#undef CONFIG_USB_STORAGE
+//#define CONFIG_S3C_USBD
+#define CONFIG_EXYNOS_USBD3
 
-#define TZPC_BASE_OFFSET		0x10000
-
-/* SD/MMC configuration */
-#define CONFIG_GENERIC_MMC
-#define CONFIG_MMC
-#define CONFIG_SDHCI
-#define CONFIG_S5P_SDHCI
-
-#define CONFIG_BOARD_EARLY_INIT_F
-
-/* PWM */
-#define CONFIG_PWM
+#define USBD_DOWN_ADDR		0xc0000000
 
 /* allow to overwrite serial and ethaddr */
 #define CONFIG_ENV_OVERWRITE
+#define CONFIG_BAUDRATE			115200
 
-/* Command definition*/
+/***********************************************************
+ * Command definition
+ ***********************************************************/
 #include <config_cmd_default.h>
 
 #define CONFIG_CMD_PING
-#define CONFIG_CMD_ELF
+
+#define CONFIG_CMD_USB
+
+#define CONFIG_CMD_MOVINAND
+
+#undef CONFIG_CMD_FLASH
+#undef CONFIG_CMD_IMLS
+#undef CONFIG_CMD_NAND
+
+#define CONFIG_CMD_CACHE
+#define CONFIG_CMD_REGINFO
 #define CONFIG_CMD_MMC
+#define CONFIG_CMD_MOVI
+#define CONFIG_CMD_ELF
+#define CONFIG_CMD_FAT
+#define CONFIG_CMD_MTDPARTS
+#define CONFIG_MTD_DEVICE
+
 #define CONFIG_CMD_EXT2
 #define CONFIG_CMD_FAT
-#define CONFIG_CMD_NET
 
-#define CONFIG_BOOTDELAY		3
-#define CONFIG_ZERO_BOOTDELAY_CHECK
+#define CONFIG_SYS_NAND_QUIET_TEST
+#define CONFIG_SYS_ONENAND_QUIET_TEST
 
-/* MMC SPL */
-#define CONFIG_SPL
-#define COPY_BL2_FNPTR_ADDR	0x02020030
+#define CONFIG_MMC
+#define CONFIG_GENERIC_MMC
+#define CONFIG_S3C_HSMMC
 
-/* specific .lds file */
-#define CONFIG_SPL_LDSCRIPT	"board/samsung/smdk5250/smdk5250-uboot-spl.lds"
-#define CONFIG_SPL_TEXT_BASE	0x02023400
-#define CONFIG_SPL_MAX_SIZE	(14 * 1024)
+/* The macro for MMC channel 0 is defined by default and can't be undefined */
 
-#define CONFIG_BOOTCOMMAND	"mmc read 40007000 451 2000; bootm 40007000"
+/* Notice for MSHC[Using of MMC CH4] */
+/*
+ * If you want MSHC at MMC CH4.
+ */
 
-/* Miscellaneous configurable options */
+#define MMC_MAX_CHANNEL		5
+
+#define USE_MMC2
+#define USE_MMC4
+
+/*
+ * BOOTP options
+ */
+#define CONFIG_BOOTP_SUBNETMASK
+#define CONFIG_BOOTP_GATEWAY
+#define CONFIG_BOOTP_HOSTNAME
+#define CONFIG_BOOTP_BOOTPATH
+
+#define CONFIG_ETHADDR		00:40:5c:26:0a:5b
+#define CONFIG_NETMASK          255.255.255.0
+#define CONFIG_IPADDR		192.168.0.20
+#define CONFIG_SERVERIP		192.168.0.10
+#define CONFIG_GATEWAYIP	192.168.0.1
+
+#define CONFIG_BOOTDELAY	3
+/* Default boot commands for Android booting. */
+#define CONFIG_BOOTCOMMAND	"movi read kernel 0 40008000;movi read rootfs 0 41000000 100000;bootm 40008000 41000000"
+#define CONFIG_BOOTARGS	""
+
+#define CONFIG_BOOTCOMMAND2	\
+		"mmc erase user 0 1072 1;"	\
+		"movi r f 1 40000000;emmc open 0;movi w z f 0 40000000;emmc close 0;"	\
+		"movi r u 1 40000000;emmc open 0;movi w z u 0 40000000;emmc close 0;"	\
+		"movi r k 1 40000000;movi w k 0 40000000;"				\
+		"movi r r 1 40000000 100000;movi w r 0 40000000 100000;"		\
+		"fdisk -c 0;"								\
+		"movi init 0;"								\
+		"fatformat mmc 0:1;"							\
+		"mmc read 1 48000000 20000 a0000;"					\
+		"fastboot flash system 48000000;"					\
+		"mmc read 1 48000000 c0000 a0000;"					\
+		"fastboot flash userdata 48000000;"					\
+		"mmc read 1 48000000 160000 a0000;"					\
+		"fastboot flash cache 48000000;"					\
+		"reset"
+
+/*
+ * Miscellaneous configurable options
+ */
 #define CONFIG_SYS_LONGHELP		/* undef to save memory */
 #define CONFIG_SYS_HUSH_PARSER		/* use "hush" command parser	*/
+#define CONFIG_SYS_PROMPT_HUSH_PS2	"> "
 #define CONFIG_SYS_PROMPT		"SMDK5250 # "
-#define CONFIG_SYS_CBSIZE		256	/* Console I/O Buffer Size */
-#define CONFIG_SYS_PBSIZE		384	/* Print Buffer Size */
-#define CONFIG_SYS_MAXARGS		16	/* max number of command args */
-#define CONFIG_DEFAULT_CONSOLE		"console=ttySAC1,115200n8\0"
+#define CONFIG_SYS_CBSIZE	256	/* Console I/O Buffer Size */
+#define CONFIG_SYS_PBSIZE	384	/* Print Buffer Size */
+#define CONFIG_SYS_MAXARGS	16	/* max number of command args */
 /* Boot Argument Buffer Size */
 #define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE
 /* memtest works on */
 #define CONFIG_SYS_MEMTEST_START	CONFIG_SYS_SDRAM_BASE
-#define CONFIG_SYS_MEMTEST_END		(CONFIG_SYS_SDRAM_BASE + 0x5E00000)
-#define CONFIG_SYS_LOAD_ADDR		(CONFIG_SYS_SDRAM_BASE + 0x3E00000)
+#define CONFIG_SYS_MEMTEST_END		(CONFIG_SYS_SDRAM_BASE + 0x5e00000)
 
 #define CONFIG_SYS_HZ			1000
 
-#define CONFIG_RD_LVL
+/* valid baudrates */
+#define CONFIG_SYS_BAUDRATE_TABLE	{ 9600, 19200, 38400, 57600, 115200 }
 
-/* Stack sizes */
-#define CONFIG_STACKSIZE		(256 << 10)	/* 256KB */
+/*-----------------------------------------------------------------------
+ * Stack sizes
+ *
+ * The stack sizes are set up in start.S using the settings below
+ */
+#define CONFIG_STACKSIZE	(256 << 10)	/* 256 KiB */
 
-#define CONFIG_NR_DRAM_BANKS	8
-#define SDRAM_BANK_SIZE		(256UL << 20UL)	/* 256 MB */
-#define PHYS_SDRAM_1		CONFIG_SYS_SDRAM_BASE
-#define PHYS_SDRAM_1_SIZE	SDRAM_BANK_SIZE
-#define PHYS_SDRAM_2		(CONFIG_SYS_SDRAM_BASE + SDRAM_BANK_SIZE)
-#define PHYS_SDRAM_2_SIZE	SDRAM_BANK_SIZE
-#define PHYS_SDRAM_3		(CONFIG_SYS_SDRAM_BASE + (2 * SDRAM_BANK_SIZE))
-#define PHYS_SDRAM_3_SIZE	SDRAM_BANK_SIZE
-#define PHYS_SDRAM_4		(CONFIG_SYS_SDRAM_BASE + (3 * SDRAM_BANK_SIZE))
-#define PHYS_SDRAM_4_SIZE	SDRAM_BANK_SIZE
-#define PHYS_SDRAM_5		(CONFIG_SYS_SDRAM_BASE + (4 * SDRAM_BANK_SIZE))
-#define PHYS_SDRAM_5_SIZE	SDRAM_BANK_SIZE
-#define PHYS_SDRAM_6		(CONFIG_SYS_SDRAM_BASE + (5 * SDRAM_BANK_SIZE))
-#define PHYS_SDRAM_6_SIZE	SDRAM_BANK_SIZE
-#define PHYS_SDRAM_7		(CONFIG_SYS_SDRAM_BASE + (6 * SDRAM_BANK_SIZE))
-#define PHYS_SDRAM_7_SIZE	SDRAM_BANK_SIZE
-#define PHYS_SDRAM_8		(CONFIG_SYS_SDRAM_BASE + (7 * SDRAM_BANK_SIZE))
-#define PHYS_SDRAM_8_SIZE	SDRAM_BANK_SIZE
+#define CONFIG_NR_DRAM_BANKS	4
+#define SDRAM_BANK_SIZE         0x10000000    /* 256 MB */
+#define PHYS_SDRAM_1            CONFIG_SYS_SDRAM_BASE /* SDRAM Bank #1 */
+#define PHYS_SDRAM_1_SIZE       SDRAM_BANK_SIZE
+#define PHYS_SDRAM_2            (CONFIG_SYS_SDRAM_BASE + SDRAM_BANK_SIZE) /* SDRAM Bank #2 */
+#define PHYS_SDRAM_2_SIZE       SDRAM_BANK_SIZE
+#define PHYS_SDRAM_3            (CONFIG_SYS_SDRAM_BASE + 2 * SDRAM_BANK_SIZE) /* SDRAM Bank #3 */
+#define PHYS_SDRAM_3_SIZE       SDRAM_BANK_SIZE
+#define PHYS_SDRAM_4            (CONFIG_SYS_SDRAM_BASE + 3 * SDRAM_BANK_SIZE) /* SDRAM Bank #4 */
+#define PHYS_SDRAM_4_SIZE       SDRAM_BANK_SIZE
+#define PHYS_SDRAM_5            (CONFIG_SYS_SDRAM_BASE + 4 * SDRAM_BANK_SIZE) /* SDRAM Bank #5 */
+#define PHYS_SDRAM_5_SIZE       SDRAM_BANK_SIZE
+#define PHYS_SDRAM_6            (CONFIG_SYS_SDRAM_BASE + 5 * SDRAM_BANK_SIZE) /* SDRAM Bank #6 */
+#define PHYS_SDRAM_6_SIZE       SDRAM_BANK_SIZE
+#define PHYS_SDRAM_7            (CONFIG_SYS_SDRAM_BASE + 6 * SDRAM_BANK_SIZE) /* SDRAM Bank #7 */
+#define PHYS_SDRAM_7_SIZE       SDRAM_BANK_SIZE
+#define PHYS_SDRAM_8            (CONFIG_SYS_SDRAM_BASE + 7 * SDRAM_BANK_SIZE) /* SDRAM Bank #8 */
+#define PHYS_SDRAM_8_SIZE       SDRAM_BANK_SIZE
 
 #define CONFIG_SYS_MONITOR_BASE	0x00000000
 
-/* FLASH and environment organization */
-#define CONFIG_SYS_NO_FLASH
-#undef CONFIG_CMD_IMLS
+/*-----------------------------------------------------------------------
+ * FLASH and environment organization
+ */
+#define CONFIG_SYS_NO_FLASH		1
+
+#define CONFIG_SYS_MONITOR_LEN		(256 << 10)	/* 256 KiB */
 #define CONFIG_IDENT_STRING		" for SMDK5250"
 
-#define CONFIG_ENV_IS_IN_MMC
-#define CONFIG_SYS_MMC_ENV_DEV		0
+#define CONFIG_ENABLE_MMU
 
-#define CONFIG_SECURE_BL1_ONLY
-
-/* Secure FW size configuration */
-#ifdef	CONFIG_SECURE_BL1_ONLY
-#define	CONFIG_SEC_FW_SIZE		(8 << 10)	/* 8KB */
+#ifdef CONFIG_ENABLE_MMU
+#define CONFIG_SYS_MAPPED_RAM_BASE	0xc0000000
+#define virt_to_phys(x)	virt_to_phy_exynos5250(x)
 #else
-#define	CONFIG_SEC_FW_SIZE		0
+#define CONFIG_SYS_MAPPED_RAM_BASE	CONFIG_SYS_SDRAM_BASE
+#define virt_to_phys(x)	(x)
 #endif
 
-/* Configuration of BL1, BL2, ENV Blocks on mmc */
-#define CONFIG_RES_BLOCK_SIZE	(512)
-#define CONFIG_BL1_SIZE		(16 << 10) /*16 K reserved for BL1*/
-#define	CONFIG_BL2_SIZE		(512UL << 10UL)	/* 512 KB */
-#define CONFIG_ENV_SIZE		(16 << 10)	/* 16 KB */
+#define CONFIG_SYS_LOAD_ADDR		CONFIG_SYS_MAPPED_RAM_BASE + 0x3e00000
+#define CONFIG_PHY_UBOOT_BASE		CONFIG_SYS_SDRAM_BASE + 0x3e00000
 
-#define CONFIG_BL1_OFFSET	(CONFIG_RES_BLOCK_SIZE + CONFIG_SEC_FW_SIZE)
-#define CONFIG_BL2_OFFSET	(CONFIG_BL1_OFFSET + CONFIG_BL1_SIZE)
-#define CONFIG_ENV_OFFSET	(CONFIG_BL2_OFFSET + CONFIG_BL2_SIZE)
+/*
+ *  Fast Boot
+*/
+/* Fastboot variables */
+#define CFG_FASTBOOT_TRANSFER_BUFFER            (0x48000000)
+#define CFG_FASTBOOT_TRANSFER_BUFFER_SIZE       (0x10000000)   /* 256MB */
+#define CFG_FASTBOOT_ADDR_KERNEL                (0x40008000)
+#define CFG_FASTBOOT_ADDR_RAMDISK               (0x40800000)
+#define CFG_FASTBOOT_PAGESIZE                   (2048)  // Page size of booting device
+#define CFG_FASTBOOT_SDMMC_BLOCKSIZE            (512)   // Block size of sdmmc
+#define CFG_PARTITION_START			(0x4000000)
 
-/* U-boot copy size from boot Media to DRAM.*/
-#define BL2_START_OFFSET	(CONFIG_BL2_OFFSET/512)
-#define BL2_SIZE_BLOC_COUNT	(CONFIG_BL2_SIZE/512)
-#define CONFIG_DOS_PARTITION
+/* Just one BSP type should be defined. */
+#if defined(CONFIG_CMD_MOVINAND)
+#define CONFIG_FASTBOOT
+#endif
 
-#define CONFIG_IRAM_STACK	0x02050000
+#if defined(CONFIG_CMD_MOVINAND)
+#define CFG_FASTBOOT_SDMMCBSP
+#endif
 
-#define CONFIG_SYS_INIT_SP_ADDR	(CONFIG_SYS_LOAD_ADDR - 0x1000000)
+/*
+ * machine type
+ */
 
-/* Ethernet Controllor Driver */
+#define MACH_TYPE       		3774	/* SMDKC210 machine ID */
+
+#define CONFIG_ENV_OFFSET		0x0007C000
+
+/*-----------------------------------------------------------------------
+ * Boot configuration
+ */
+#define BOOT_ONENAND		0x1
+#define BOOT_NAND		0x40000
+#define BOOT_MMCSD		0x3
+#define BOOT_NOR		0x4
+#define BOOT_SEC_DEV		0x5
+#define BOOT_EMMC		0x6
+#define BOOT_EMMC_4_4		0x7
+
+#define CONFIG_ZIMAGE_BOOT
+
+#define CONFIG_ENV_IS_IN_AUTO		1
+#define CONFIG_ENV_SIZE			0x4000
+
+#define CONFIG_DOS_PARTITION		1
+
+//#define CONFIG_SYS_INIT_SP_ADDR	(CONFIG_SYS_LOAD_ADDR - 0x1000000)
+#define CONFIG_SYS_INIT_SP_ADDR	(0x43e00000 - 0x1000000)
+
+/*
+ * Ethernet Contoller driver
+ */
 #ifdef CONFIG_CMD_NET
+#define CONFIG_NET_MULTI
 #define CONFIG_SMC911X
-#define CONFIG_SMC911X_BASE		0x5000000
+#define CONFIG_SMC911X_BASE	0x5000000
 #define CONFIG_SMC911X_16_BIT
-#define CONFIG_ENV_SROM_BANK		1
-#endif /*CONFIG_CMD_NET*/
+#endif /* CONFIG_CMD_NET */
 
-/* Enable devicetree support */
-#define CONFIG_OF_LIBFDT
+/* GPIO */
+#define GPIO_BASE	0x11400000
+
+#define CFG_PHY_UBOOT_BASE	MEMORY_BASE_ADDRESS + 0x3e00000
+#define CFG_PHY_KERNEL_BASE	MEMORY_BASE_ADDRESS + 0x8000
+
+#define MEMORY_BASE_ADDRESS	0x40000000
 
 #endif	/* __CONFIG_H */

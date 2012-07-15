@@ -2,7 +2,6 @@
  * An inteface for configuring a hardware via u-boot environment.
  *
  * Copyright (c) 2009  MontaVista Software, Inc.
- * Copyright 2011 Freescale Semiconductor, Inc.
  *
  * Author: Anton Vorontsov <avorontsov@ru.mvista.com>
  *
@@ -72,19 +71,25 @@ next:
 const char cpu_hwconfig[] __attribute__((weak)) = "";
 const char board_hwconfig[] __attribute__((weak)) = "";
 
-static const char *__hwconfig(const char *opt, size_t *arglen,
-			      const char *env_hwconfig)
-{
-	const char *ret;
+#define HWCONFIG_PRE_RELOC_BUF_SIZE	128
 
-	/* if we are passed a buffer use it, otherwise try the environment */
-	if (!env_hwconfig) {
-		if (!(gd->flags & GD_FLG_ENV_READY)) {
-			printf("WARNING: Calling __hwconfig without a buffer "
-					"and before environment is ready\n");
-			return NULL;
-		}
+static const char *__hwconfig(const char *opt, size_t *arglen)
+{
+	const char *env_hwconfig = NULL, *ret;
+	char buf[HWCONFIG_PRE_RELOC_BUF_SIZE];
+
+	if (gd->flags & GD_FLG_ENV_READY) {
 		env_hwconfig = getenv("hwconfig");
+	} else {
+		/*
+		 * Use our own on stack based buffer before relocation to allow
+		 * accessing longer hwconfig strings that might be in the
+		 * environment before we've relocated.  This is pretty fragile
+		 * on both the use of stack and if the buffer is big enough.
+		 * However we will get a warning from getenv_f for the later.
+		 */
+		if ((getenv_f("hwconfig", buf, sizeof(buf))) > 0)
+			env_hwconfig = buf;
 	}
 
 	if (env_hwconfig) {
@@ -104,9 +109,8 @@ static const char *__hwconfig(const char *opt, size_t *arglen,
 }
 
 /*
- * hwconfig_f - query if a particular hwconfig option is specified
+ * hwconfig - query if a particular hwconfig option is specified
  * @opt:	a string representing an option
- * @buf:	if non-NULL use this buffer to parse, otherwise try env
  *
  * This call can be used to find out whether U-Boot should configure
  * a particular hardware option.
@@ -123,36 +127,34 @@ static const char *__hwconfig(const char *opt, size_t *arglen,
  * that the board file only calls things that are actually used, so
  * hwconfig() will always return true result.
  */
-int hwconfig_f(const char *opt, char *buf)
+int hwconfig(const char *opt)
 {
-	return !!__hwconfig(opt, NULL, buf);
+	return !!__hwconfig(opt, NULL);
 }
 
 /*
- * hwconfig_arg_f - get hwconfig option's argument
+ * hwconfig_arg - get hwconfig option's argument
  * @opt:	a string representing an option
  * @arglen:	a pointer to an allocated size_t variable
- * @buf:	if non-NULL use this buffer to parse, otherwise try env
  *
- * Unlike hwconfig_f() function, this function returns a pointer to the
+ * Unlike hwconfig() function, this function returns a pointer to the
  * start of the hwconfig arguments, if option is not found or it has
  * no specified arguments, the function returns NULL pointer.
  *
  * If CONFIG_HWCONFIG is undefined, the function returns "", and
  * arglen is set to 0.
  */
-const char *hwconfig_arg_f(const char *opt, size_t *arglen, char *buf)
+const char *hwconfig_arg(const char *opt, size_t *arglen)
 {
-	return __hwconfig(opt, arglen, buf);
+	return __hwconfig(opt, arglen);
 }
 
 /*
- * hwconfig_arg_cmp_f - compare hwconfig option's argument
+ * hwconfig_arg_cmp - compare hwconfig option's argument
  * @opt:	a string representing an option
  * @arg:	a string for comparing an option's argument
- * @buf:	if non-NULL use this buffer to parse, otherwise try env
  *
- * This call is similar to hwconfig_arg_f, but instead of returning
+ * This call is similar to hwconfig_arg, but instead of returning
  * hwconfig argument and its length, it is comparing it to @arg.
  *
  * Returns non-zero value if @arg matches, 0 otherwise.
@@ -160,12 +162,12 @@ const char *hwconfig_arg_f(const char *opt, size_t *arglen, char *buf)
  * If CONFIG_HWCONFIG is undefined, the function returns a non-zero
  * value, i.e. the argument matches.
  */
-int hwconfig_arg_cmp_f(const char *opt, const char *arg, char *buf)
+int hwconfig_arg_cmp(const char *opt, const char *arg)
 {
 	const char *argstr;
 	size_t arglen;
 
-	argstr = hwconfig_arg_f(opt, &arglen, buf);
+	argstr = hwconfig_arg(opt, &arglen);
 	if (!argstr || arglen != strlen(arg))
 		return 0;
 
@@ -173,67 +175,63 @@ int hwconfig_arg_cmp_f(const char *opt, const char *arg, char *buf)
 }
 
 /*
- * hwconfig_sub_f - query if a particular hwconfig sub-option is specified
+ * hwconfig_sub - query if a particular hwconfig sub-option is specified
  * @opt:	a string representing an option
  * @subopt:	a string representing a sub-option
- * @buf:	if non-NULL use this buffer to parse, otherwise try env
  *
- * This call is similar to hwconfig_f(), except that it takes additional
+ * This call is similar to hwconfig(), except that it takes additional
  * argument @subopt. In this example:
  * 	"dr_usb:mode=peripheral"
  * "dr_usb" is an option, "mode" is a sub-option, and "peripheral" is its
  * argument.
  */
-int hwconfig_sub_f(const char *opt, const char *subopt, char *buf)
+int hwconfig_sub(const char *opt, const char *subopt)
 {
 	size_t arglen;
 	const char *arg;
 
-	arg = __hwconfig(opt, &arglen, buf);
+	arg = __hwconfig(opt, &arglen);
 	if (!arg)
 		return 0;
 	return !!hwconfig_parse(arg, arglen, subopt, ",;", '=', NULL);
 }
 
 /*
- * hwconfig_subarg_f - get hwconfig sub-option's argument
+ * hwconfig_subarg - get hwconfig sub-option's argument
  * @opt:	a string representing an option
  * @subopt:	a string representing a sub-option
  * @subarglen:	a pointer to an allocated size_t variable
- * @buf:	if non-NULL use this buffer to parse, otherwise try env
  *
- * This call is similar to hwconfig_arg_f(), except that it takes an
- * additional argument @subopt, and so works with sub-options.
+ * This call is similar to hwconfig_arg(), except that it takes an additional
+ * argument @subopt, and so works with sub-options.
  */
-const char *hwconfig_subarg_f(const char *opt, const char *subopt,
-			      size_t *subarglen, char *buf)
+const char *hwconfig_subarg(const char *opt, const char *subopt,
+			    size_t *subarglen)
 {
 	size_t arglen;
 	const char *arg;
 
-	arg = __hwconfig(opt, &arglen, buf);
+	arg = __hwconfig(opt, &arglen);
 	if (!arg)
 		return NULL;
 	return hwconfig_parse(arg, arglen, subopt, ",;", '=', subarglen);
 }
 
 /*
- * hwconfig_arg_cmp_f - compare hwconfig sub-option's argument
+ * hwconfig_arg_cmp - compare hwconfig sub-option's argument
  * @opt:	a string representing an option
  * @subopt:	a string representing a sub-option
  * @subarg:	a string for comparing an sub-option's argument
- * @buf:	if non-NULL use this buffer to parse, otherwise try env
  *
- * This call is similar to hwconfig_arg_cmp_f, except that it takes an
- * additional argument @subopt, and so works with sub-options.
+ * This call is similar to hwconfig_arg_cmp, except that it takes an additional
+ * argument @subopt, and so works with sub-options.
  */
-int hwconfig_subarg_cmp_f(const char *opt, const char *subopt,
-			  const char *subarg, char *buf)
+int hwconfig_subarg_cmp(const char *opt, const char *subopt, const char *subarg)
 {
 	const char *argstr;
 	size_t arglen;
 
-	argstr = hwconfig_subarg_f(opt, subopt, &arglen, buf);
+	argstr = hwconfig_subarg(opt, subopt, &arglen);
 	if (!argstr || arglen != strlen(subarg))
 		return 0;
 

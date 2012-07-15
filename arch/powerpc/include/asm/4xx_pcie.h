@@ -389,6 +389,14 @@ static inline int is_end_point(int port)
 	return 0;
 }
 
+static inline void mdelay(int n)
+{
+	u32 ms = n;
+
+	while (ms--)
+		udelay(1000);
+}
+
 #if defined(PCIE0_SDR)
 static inline u32 sdr_base(int port)
 {

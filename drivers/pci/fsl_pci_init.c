@@ -1,5 +1,5 @@
 /*
- * Copyright 2007-2011 Freescale Semiconductor, Inc.
+ * Copyright 2007-2010 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -18,8 +18,6 @@
  */
 
 #include <common.h>
-#include <malloc.h>
-#include <asm/fsl_serdes.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -46,6 +44,12 @@ DECLARE_GLOBAL_DATA_PTR;
 #define FSL_PCIE_CAP_ID		0x4c
 #define FSL_PCIE_CFG_RDY	0x4b0
 #define FSL_PROG_IF_AGENT	0x1
+
+void pciauto_prescan_setup_bridge(struct pci_controller *hose,
+				pci_dev_t dev, int sub_bus);
+void pciauto_postscan_setup_bridge(struct pci_controller *hose,
+				pci_dev_t dev, int sub_bus);
+void pciauto_config_init(struct pci_controller *hose);
 
 #ifndef CONFIG_SYS_PCI_MEMORY_BUS
 #define CONFIG_SYS_PCI_MEMORY_BUS 0
@@ -211,13 +215,10 @@ static int fsl_pci_setup_inbound_windows(struct pci_controller *hose,
 	return 1;
 }
 
-void fsl_pci_init(struct pci_controller *hose, struct fsl_pci_info *pci_info)
+void fsl_pci_init(struct pci_controller *hose, u32 cfg_addr, u32 cfg_data)
 {
-	u32 cfg_addr = (u32)&((ccsr_fsl_pci_t *)pci_info->regs)->cfg_addr;
-	u32 cfg_data = (u32)&((ccsr_fsl_pci_t *)pci_info->regs)->cfg_data;
 	u16 temp16;
 	u32 temp32;
-	u32 block_rev;
 	int enabled, r, inbound = 0;
 	u16 ltssm;
 	u8 temp8, pcie_cap;
@@ -227,19 +228,16 @@ void fsl_pci_init(struct pci_controller *hose, struct fsl_pci_info *pci_info)
 
 	/* Initialize ATMU registers based on hose regions and flags */
 	volatile pot_t *po = &pci->pot[1];	/* skip 0 */
-	volatile pit_t *pi;
+	volatile pit_t *pi = &pci->pit[2];	/* ranges from: 3 to 1 */
 
 	u64 out_hi = 0, out_lo = -1ULL;
 	u32 pcicsrbar, pcicsrbar_sz;
 
-	pci_setup_indirect(hose, cfg_addr, cfg_data);
+#ifdef DEBUG
+	int neg_link_w;
+#endif
 
-	block_rev = in_be32(&pci->block_rev1);
-	if (PEX_IP_BLK_REV_2_2 <= block_rev) {
-		pi = &pci->pit[2];	/* 0xDC0 */
-	} else {
-		pi = &pci->pit[3];	/* 0xDE0 */
-	}
+	pci_setup_indirect(hose, cfg_addr, cfg_data);
 
 	/* Handle setup of outbound windows first */
 	for (r = 0; r < hose->region_count; r++) {
@@ -299,10 +297,10 @@ void fsl_pci_init(struct pci_controller *hose, struct fsl_pci_info *pci_info)
 	inbound = fsl_pci_setup_inbound_windows(hose, out_lo, pcie_cap, pi);
 
 	for (r = 0; r < hose->region_count; r++)
-		debug("PCI reg:%d %016llx:%016llx %016llx %08lx\n", r,
+		debug("PCI reg:%d %016llx:%016llx %016llx %08x\n", r,
 			(u64)hose->regions[r].phys_start,
-			(u64)hose->regions[r].bus_start,
-			(u64)hose->regions[r].size,
+			hose->regions[r].bus_start,
+			hose->regions[r].size,
 			hose->regions[r].flags);
 
 	pci_register_hose(hose);
@@ -310,7 +308,7 @@ void fsl_pci_init(struct pci_controller *hose, struct fsl_pci_info *pci_info)
 	hose->current_busno = hose->first_busno;
 
 	out_be32(&pci->pedr, 0xffffffff);	/* Clear any errors */
-	out_be32(&pci->peer, ~0x20140);	/* Enable All Error Interrupts except
+	out_be32(&pci->peer, ~0x20140);	/* Enable All Error Interupts except
 					 * - Master abort (pci)
 					 * - Master PERR (pci)
 					 * - ICCA (PCIe)
@@ -319,13 +317,6 @@ void fsl_pci_init(struct pci_controller *hose, struct fsl_pci_info *pci_info)
 	temp32 |= 0xf000e;		/* set URR, FER, NFER (but not CER) */
 	pci_hose_write_config_dword(hose, dev, PCI_DCR, temp32);
 
-#if defined(CONFIG_FSL_PCIE_DISABLE_ASPM)
-	temp32 = 0;
-	pci_hose_read_config_dword(hose, dev, PCI_LCR, &temp32);
-	temp32 &= ~0x03;		/* Disable ASPM  */
-	pci_hose_write_config_dword(hose, dev, PCI_LCR, temp32);
-	udelay(1);
-#endif
 	if (pcie_cap == PCI_CAP_ID_EXP) {
 		pci_hose_read_config_word(hose, dev, PCI_LTSSM, &ltssm);
 		enabled = ltssm >= PCI_LTSSM_L0;
@@ -338,7 +329,7 @@ void fsl_pci_init(struct pci_controller *hose, struct fsl_pci_info *pci_info)
 			setbits_be32(&pci->pdb_stat, 0x08000000);
 			(void) in_be32(&pci->pdb_stat);
 			udelay(100);
-			debug("  Asserting PCIe reset @%p = %x\n",
+			debug("  Asserting PCIe reset @%x = %x\n",
 			      &pci->pdb_stat, in_be32(&pci->pdb_stat));
 			/* clear PCIe reset */
 			clrbits_be32(&pci->pdb_stat, 0x08000000);
@@ -361,20 +352,20 @@ void fsl_pci_init(struct pci_controller *hose, struct fsl_pci_info *pci_info)
 #endif
 
 		if (!enabled) {
-			/* Let the user know there's no PCIe link */
-			printf("no link, regs @ 0x%lx\n", pci_info->regs);
+			debug("....PCIE link error.  Skipping scan."
+			      "LTSSM=0x%02x\n", ltssm);
 			hose->last_busno = hose->first_busno;
 			return;
 		}
 
 		out_be32(&pci->pme_msg_det, 0xffffffff);
 		out_be32(&pci->pme_msg_int_en, 0xffffffff);
-
-		/* Print the negotiated PCIe link width */
+#ifdef DEBUG
 		pci_hose_read_config_word(hose, dev, PCI_LSR, &temp16);
-		printf("x%d, regs @ 0x%lx\n", (temp16 & 0x3f0 ) >> 4,
-			pci_info->regs);
-
+		neg_link_w = (temp16 & 0x3f0 ) >> 4;
+		printf("...PCIE LTSSM=0x%x, Negotiated link width=%d\n",
+		      ltssm, neg_link_w);
+#endif
 		hose->current_busno++; /* Start scan with secondary */
 		pciauto_prescan_setup_bridge(hose, dev, hose->current_busno);
 	}
@@ -483,7 +474,7 @@ int fsl_pci_init_port(struct fsl_pci_info *pci_info,
 	hose->region_count = r - hose->regions;
 	hose->first_busno = busno;
 
-	fsl_pci_init(hose, pci_info);
+	fsl_pci_init(hose, (u32)&pci->cfg_addr, (u32)&pci->cfg_data);
 
 	if (fsl_is_pci_agent(hose)) {
 		fsl_pci_config_unlock(hose);
@@ -492,7 +483,7 @@ int fsl_pci_init_port(struct fsl_pci_info *pci_info,
 
 	pci_hose_read_config_byte(hose, dev, FSL_PCIE_CAP_ID, &pcie_cap);
 	printf("PCI%s%x: Bus %02x - %02x\n", pcie_cap == PCI_CAP_ID_EXP ?
-		"e" : "", pci_info->pci_num,
+		"E" : "", pci_info->pci_num,
 		hose->first_busno, hose->last_busno);
 
 	return(hose->last_busno + 1);
@@ -522,169 +513,16 @@ void fsl_pci_config_unlock(struct pci_controller *hose)
 	}
 }
 
-#if defined(CONFIG_PCIE1) || defined(CONFIG_PCIE2) || \
-    defined(CONFIG_PCIE3) || defined(CONFIG_PCIE4)
-int fsl_configure_pcie(struct fsl_pci_info *info,
-			struct pci_controller *hose,
-			const char *connected, int busno)
-{
-	int is_endpoint;
-
-	set_next_law(info->mem_phys, law_size_bits(info->mem_size), info->law);
-	set_next_law(info->io_phys, law_size_bits(info->io_size), info->law);
-
-	is_endpoint = fsl_setup_hose(hose, info->regs);
-	printf("PCIe%u: %s", info->pci_num,
-		is_endpoint ? "Endpoint" : "Root Complex");
-	if (connected)
-		printf(" of %s", connected);
-	puts(", ");
-
-	return fsl_pci_init_port(info, hose, busno);
-}
-
-#if defined(CONFIG_FSL_CORENET)
-	#define _DEVDISR_PCIE1 FSL_CORENET_DEVDISR_PCIE1
-	#define _DEVDISR_PCIE2 FSL_CORENET_DEVDISR_PCIE2
-	#define _DEVDISR_PCIE3 FSL_CORENET_DEVDISR_PCIE3
-	#define _DEVDISR_PCIE4 FSL_CORENET_DEVDISR_PCIE4
-	#define CONFIG_SYS_MPC8xxx_GUTS_ADDR CONFIG_SYS_MPC85xx_GUTS_ADDR
-#elif defined(CONFIG_MPC85xx)
-	#define _DEVDISR_PCIE1 MPC85xx_DEVDISR_PCIE
-	#define _DEVDISR_PCIE2 MPC85xx_DEVDISR_PCIE2
-	#define _DEVDISR_PCIE3 MPC85xx_DEVDISR_PCIE3
-	#define _DEVDISR_PCIE4 0
-	#define CONFIG_SYS_MPC8xxx_GUTS_ADDR CONFIG_SYS_MPC85xx_GUTS_ADDR
-#elif defined(CONFIG_MPC86xx)
-	#define _DEVDISR_PCIE1 MPC86xx_DEVDISR_PCIE1
-	#define _DEVDISR_PCIE2 MPC86xx_DEVDISR_PCIE2
-	#define _DEVDISR_PCIE3 0
-	#define _DEVDISR_PCIE4 0
-	#define CONFIG_SYS_MPC8xxx_GUTS_ADDR \
-		(&((immap_t *)CONFIG_SYS_IMMR)->im_gur)
-#else
-#error "No defines for DEVDISR_PCIE"
-#endif
-
-/* Implement a dummy function for those platforms w/o SERDES */
-static const char *__board_serdes_name(enum srds_prtcl device)
-{
-	switch (device) {
-#ifdef CONFIG_SYS_PCIE1_NAME
-	case PCIE1:
-		return CONFIG_SYS_PCIE1_NAME;
-#endif
-#ifdef CONFIG_SYS_PCIE2_NAME
-	case PCIE2:
-		return CONFIG_SYS_PCIE2_NAME;
-#endif
-#ifdef CONFIG_SYS_PCIE3_NAME
-	case PCIE3:
-		return CONFIG_SYS_PCIE3_NAME;
-#endif
-#ifdef CONFIG_SYS_PCIE4_NAME
-	case PCIE4:
-		return CONFIG_SYS_PCIE4_NAME;
-#endif
-	default:
-		return NULL;
-	}
-
-	return NULL;
-}
-
-__attribute__((weak, alias("__board_serdes_name"))) const char *
-board_serdes_name(enum srds_prtcl device);
-
-static u32 devdisr_mask[] = {
-	_DEVDISR_PCIE1,
-	_DEVDISR_PCIE2,
-	_DEVDISR_PCIE3,
-	_DEVDISR_PCIE4,
-};
-
-int fsl_pcie_init_ctrl(int busno, u32 devdisr, enum srds_prtcl dev,
-			struct fsl_pci_info *pci_info)
-{
-	struct pci_controller *hose;
-	int num = dev - PCIE1;
-
-	hose = calloc(1, sizeof(struct pci_controller));
-	if (!hose)
-		return busno;
-
-	if (is_serdes_configured(dev) && !(devdisr & devdisr_mask[num])) {
-		busno = fsl_configure_pcie(pci_info, hose,
-				board_serdes_name(dev), busno);
-	} else {
-		printf("PCIe%d: disabled\n", num + 1);
-	}
-
-	return busno;
-}
-
-int fsl_pcie_init_board(int busno)
-{
-	struct fsl_pci_info pci_info;
-	ccsr_gur_t *gur = (void *)CONFIG_SYS_MPC8xxx_GUTS_ADDR;
-	u32 devdisr = in_be32(&gur->devdisr);
-
-#ifdef CONFIG_PCIE1
-	SET_STD_PCIE_INFO(pci_info, 1);
-	busno = fsl_pcie_init_ctrl(busno, devdisr, PCIE1, &pci_info);
-#else
-	setbits_be32(&gur->devdisr, _DEVDISR_PCIE1); /* disable */
-#endif
-
-#ifdef CONFIG_PCIE2
-	SET_STD_PCIE_INFO(pci_info, 2);
-	busno = fsl_pcie_init_ctrl(busno, devdisr, PCIE2, &pci_info);
-#else
-	setbits_be32(&gur->devdisr, _DEVDISR_PCIE2); /* disable */
-#endif
-
-#ifdef CONFIG_PCIE3
-	SET_STD_PCIE_INFO(pci_info, 3);
-	busno = fsl_pcie_init_ctrl(busno, devdisr, PCIE3, &pci_info);
-#else
-	setbits_be32(&gur->devdisr, _DEVDISR_PCIE3); /* disable */
-#endif
-
-#ifdef CONFIG_PCIE4
-	SET_STD_PCIE_INFO(pci_info, 4);
-	busno = fsl_pcie_init_ctrl(busno, devdisr, PCIE4, &pci_info);
-#else
-	setbits_be32(&gur->devdisr, _DEVDISR_PCIE4); /* disable */
-#endif
-
- 	return busno;
-}
-#else
-int fsl_pcie_init_ctrl(int busno, u32 devdisr, enum srds_prtcl dev,
-			struct fsl_pci_info *pci_info)
-{
-	return busno;
-}
-
-int fsl_pcie_init_board(int busno)
-{
-	return busno;
-}
-#endif
-
 #ifdef CONFIG_OF_BOARD_SETUP
 #include <libfdt.h>
 #include <fdt_support.h>
 
 void ft_fsl_pci_setup(void *blob, const char *pci_compat,
-			unsigned long ctrl_addr)
+			struct pci_controller *hose, unsigned long ctrl_addr)
 {
 	int off;
 	u32 bus_range[2];
 	phys_addr_t p_ctrl_addr = (phys_addr_t)ctrl_addr;
-	struct pci_controller *hose;
-
-	hose = find_hose_by_cfg_addr((void *)(ctrl_addr));
 
 	/* convert ctrl_addr to true physical address */
 	p_ctrl_addr = (phys_addr_t)ctrl_addr - CONFIG_SYS_CCSRBAR;

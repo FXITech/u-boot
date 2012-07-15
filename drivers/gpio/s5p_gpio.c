@@ -20,7 +20,7 @@
 
 #include <common.h>
 #include <asm/io.h>
-#include <asm/gpio.h>
+#include <asm/arch/gpio.h>
 
 #define CON_MASK(x)		(0xf << ((x) << 2))
 #define CON_SFR(x, v)		((v) << ((x) << 2))
@@ -36,7 +36,7 @@
 #define RATE_MASK(x)		(0x1 << (x + 16))
 #define RATE_SET(x)		(0x1 << (x + 16))
 
-void s5p_gpio_cfg_pin(struct s5p_gpio_bank *bank, int gpio, int cfg)
+void gpio_cfg_pin(struct s5p_gpio_bank *bank, int gpio, int cfg)
 {
 	unsigned int value;
 
@@ -46,11 +46,11 @@ void s5p_gpio_cfg_pin(struct s5p_gpio_bank *bank, int gpio, int cfg)
 	writel(value, &bank->con);
 }
 
-void s5p_gpio_direction_output(struct s5p_gpio_bank *bank, int gpio, int en)
+void gpio_direction_output(struct s5p_gpio_bank *bank, int gpio, int en)
 {
 	unsigned int value;
 
-	s5p_gpio_cfg_pin(bank, gpio, GPIO_OUTPUT);
+	gpio_cfg_pin(bank, gpio, GPIO_OUTPUT);
 
 	value = readl(&bank->dat);
 	value &= ~DAT_MASK(gpio);
@@ -59,12 +59,12 @@ void s5p_gpio_direction_output(struct s5p_gpio_bank *bank, int gpio, int en)
 	writel(value, &bank->dat);
 }
 
-void s5p_gpio_direction_input(struct s5p_gpio_bank *bank, int gpio)
+void gpio_direction_input(struct s5p_gpio_bank *bank, int gpio)
 {
-	s5p_gpio_cfg_pin(bank, gpio, GPIO_INPUT);
+	gpio_cfg_pin(bank, gpio, GPIO_INPUT);
 }
 
-void s5p_gpio_set_value(struct s5p_gpio_bank *bank, int gpio, int en)
+void gpio_set_value(struct s5p_gpio_bank *bank, int gpio, int en)
 {
 	unsigned int value;
 
@@ -75,7 +75,7 @@ void s5p_gpio_set_value(struct s5p_gpio_bank *bank, int gpio, int en)
 	writel(value, &bank->dat);
 }
 
-unsigned int s5p_gpio_get_value(struct s5p_gpio_bank *bank, int gpio)
+unsigned int gpio_get_value(struct s5p_gpio_bank *bank, int gpio)
 {
 	unsigned int value;
 
@@ -83,7 +83,7 @@ unsigned int s5p_gpio_get_value(struct s5p_gpio_bank *bank, int gpio)
 	return !!(value & DAT_MASK(gpio));
 }
 
-void s5p_gpio_set_pull(struct s5p_gpio_bank *bank, int gpio, int mode)
+void gpio_set_pull(struct s5p_gpio_bank *bank, int gpio, int mode)
 {
 	unsigned int value;
 
@@ -102,7 +102,7 @@ void s5p_gpio_set_pull(struct s5p_gpio_bank *bank, int gpio, int mode)
 	writel(value, &bank->pull);
 }
 
-void s5p_gpio_set_drv(struct s5p_gpio_bank *bank, int gpio, int mode)
+void gpio_set_drv(struct s5p_gpio_bank *bank, int gpio, int mode)
 {
 	unsigned int value;
 
@@ -123,7 +123,7 @@ void s5p_gpio_set_drv(struct s5p_gpio_bank *bank, int gpio, int mode)
 	writel(value, &bank->drv);
 }
 
-void s5p_gpio_set_rate(struct s5p_gpio_bank *bank, int gpio, int mode)
+void gpio_set_rate(struct s5p_gpio_bank *bank, int gpio, int mode)
 {
 	unsigned int value;
 
@@ -140,57 +140,4 @@ void s5p_gpio_set_rate(struct s5p_gpio_bank *bank, int gpio, int mode)
 	}
 
 	writel(value, &bank->drv);
-}
-
-struct s5p_gpio_bank *s5p_gpio_get_bank(unsigned gpio)
-{
-	int bank = gpio / GPIO_PER_BANK;
-	bank *= sizeof(struct s5p_gpio_bank);
-
-	return (struct s5p_gpio_bank *) (s5p_gpio_base(gpio) + bank);
-}
-
-int s5p_gpio_get_pin(unsigned gpio)
-{
-	return gpio % GPIO_PER_BANK;
-}
-
-/* Common GPIO API */
-
-int gpio_request(unsigned gpio, const char *label)
-{
-	return 0;
-}
-
-int gpio_free(unsigned gpio)
-{
-	return 0;
-}
-
-int gpio_direction_input(unsigned gpio)
-{
-	s5p_gpio_direction_input(s5p_gpio_get_bank(gpio),
-				s5p_gpio_get_pin(gpio));
-	return 0;
-}
-
-int gpio_direction_output(unsigned gpio, int value)
-{
-	s5p_gpio_direction_output(s5p_gpio_get_bank(gpio),
-				 s5p_gpio_get_pin(gpio), value);
-	return 0;
-}
-
-int gpio_get_value(unsigned gpio)
-{
-	return (int) s5p_gpio_get_value(s5p_gpio_get_bank(gpio),
-				       s5p_gpio_get_pin(gpio));
-}
-
-int gpio_set_value(unsigned gpio, int value)
-{
-	s5p_gpio_set_value(s5p_gpio_get_bank(gpio),
-			  s5p_gpio_get_pin(gpio), value);
-
-	return 0;
 }

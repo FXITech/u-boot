@@ -1,6 +1,6 @@
 /*
  * (C) Copyright 2007-2008
- * Stelian Pop <stelian@popies.net>
+ * Stelian Pop <stelian.pop@leadtechdesign.com>
  * Lead Tech Design <www.leadtechdesign.com>
  *
  * See file CREDITS for list of people who contributed to this
@@ -23,14 +23,14 @@
  */
 
 #include <common.h>
-#include <asm/io.h>
 #include <asm/arch/hardware.h>
 #include <asm/arch/at91_rstc.h>
+#include <asm/arch/io.h>
 
 /* Reset the cpu by telling the reset controller to do so */
 void reset_cpu(ulong ignored)
 {
-	at91_rstc_t *rstc = (at91_rstc_t *) ATMEL_BASE_RSTC;
+	at91_rstc_t *rstc = (at91_rstc_t *) AT91_RSTC_BASE;
 
 	writel(AT91_RSTC_KEY
 		| AT91_RSTC_CR_PROCRST	/* Processor Reset */

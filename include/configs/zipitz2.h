@@ -25,14 +25,13 @@
 /*
  * High Level Board Configuration Options
  */
-#define	CONFIG_CPU_PXA27X		1	/* Marvell PXA270 CPU */
+#define	CONFIG_PXA27X		1	/* Marvell PXA270 CPU */
 #define	CONFIG_ZIPITZ2		1	/* Zipit Z2 board */
 #define	CONFIG_SYS_TEXT_BASE	0x0
 
-#undef	CONFIG_BOARD_LATE_INIT
+#undef	BOARD_LATE_INIT
 #undef	CONFIG_USE_IRQ
 #undef	CONFIG_SKIP_LOWLEVEL_INIT
-#define	CONFIG_PREBOOT
 
 /*
  * Environment settings
@@ -46,8 +45,7 @@
 #define	CONFIG_ARCH_CPU_INIT
 
 #define	CONFIG_BOOTCOMMAND						\
-	"if mmc rescan && ext2load mmc 0 0xa0000000 boot/uboot.script ;"\
-	"then "								\
+	"if mmc init && fatload mmc 0 0xa0000000 uboot.script ; then "	\
 		"source 0xa0000000; "					\
 	"else "								\
 		"bootm 0x60000; "					\
@@ -68,6 +66,7 @@
 #define	CONFIG_PXA_SERIAL
 #define	CONFIG_STUART			1
 #define	CONFIG_BAUDRATE			115200
+#define	CONFIG_SYS_BAUDRATE_TABLE	{ 9600, 19200, 38400, 57600, 115200 }
 
 /*
  * Bootloader Components Configuration
@@ -86,8 +85,7 @@
  */
 #ifdef	CONFIG_CMD_MMC
 #define	CONFIG_MMC
-#define	CONFIG_GENERIC_MMC
-#define	CONFIG_PXA_MMC_GENERIC
+#define	CONFIG_PXA_MMC
 #define	CONFIG_SYS_MMC_BASE		0xF0000000
 #define	CONFIG_CMD_FAT
 #define CONFIG_CMD_EXT2
@@ -133,6 +131,7 @@ unsigned char zipitz2_spi_read(void);
  * HUSH Shell Configuration
  */
 #define	CONFIG_SYS_HUSH_PARSER		1
+#define	CONFIG_SYS_PROMPT_HUSH_PS2	"> "
 
 #define	CONFIG_SYS_LONGHELP				/* undef to save memory	*/
 #ifdef	CONFIG_SYS_HUSH_PARSER
@@ -163,12 +162,6 @@ unsigned char zipitz2_spi_read(void);
 #endif
 
 /*
- * SRAM Map
- */
-#define	PHYS_SRAM			0x5c000000	/* SRAM Bank #1 */
-#define	PHYS_SRAM_SIZE			0x00040000	/* 256k */
-
-/*
  * DRAM Map
  */
 #define	CONFIG_NR_DRAM_BANKS		1		/* We have 1 bank of DRAM */
@@ -184,7 +177,7 @@ unsigned char zipitz2_spi_read(void);
 #define	CONFIG_SYS_LOAD_ADDR		CONFIG_SYS_DRAM_BASE
 
 #define CONFIG_SYS_SDRAM_BASE		PHYS_SDRAM_1
-#define	CONFIG_SYS_INIT_SP_ADDR		(GENERATED_GBL_DATA_SIZE + PHYS_SRAM + 2048)
+#define	CONFIG_SYS_INIT_SP_ADDR		(GENERATED_GBL_DATA_SIZE + PHYS_SDRAM_1 + 2048)
 
 /*
  * NOR FLASH

@@ -49,6 +49,7 @@
 
 #define CONFIG_CONS_INDEX	1
 #define CONFIG_BAUDRATE		9600
+#define CONFIG_SYS_BAUDRATE_TABLE	{ 9600, 19200, 38400, 57600, 115200 }
 
 #define CONFIG_PREBOOT	"echo;echo Type \\\"run flash_nfs\\\" to mount root filesystem over NFS;echo"
 
@@ -89,6 +90,9 @@
 
 #if 1
 #define	CONFIG_SYS_HUSH_PARSER		1	/* use "hush" command parser	*/
+#endif
+#ifdef	CONFIG_SYS_HUSH_PARSER
+#define	CONFIG_SYS_PROMPT_HUSH_PS2	"> "
 #endif
 
 /* Print Buffer Size
@@ -134,6 +138,9 @@
 /*-----------------------------------------------------------------------
  * Definitions for initial stack pointer and data area
  */
+
+	/* Size in bytes reserved for initial data
+	 */
 
 #define CONFIG_SYS_INIT_RAM_ADDR     0x40000000
 #define CONFIG_SYS_INIT_RAM_SIZE      0x1000
@@ -290,6 +297,7 @@
 #define CONFIG_PCI			/* include pci support			*/
 #undef CONFIG_PCI_PNP
 
+#define CONFIG_NET_MULTI		/* Multi ethernet cards support		*/
 
 #define CONFIG_TULIP
 #define CONFIG_TULIP_USE_IO

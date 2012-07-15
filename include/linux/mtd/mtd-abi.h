@@ -8,7 +8,7 @@
 #define __MTD_ABI_H__
 
 #if 1
-#include <linux/compat.h>
+#include <linux/mtd/compat.h>
 #endif
 
 struct erase_info_user {

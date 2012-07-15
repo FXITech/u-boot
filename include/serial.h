@@ -1,11 +1,12 @@
 #ifndef __SERIAL_H__
 #define __SERIAL_H__
 
-#include <post.h>
+#define NAMESIZE 16
+#define CTLRSIZE 8
 
 struct serial_device {
-	/* enough bytes to match alignment of following func pointer */
-	char name[16];
+	char name[NAMESIZE];
+	char ctlr[CTLRSIZE];
 
 	int  (*init) (void);
 	int  (*uninit) (void);
@@ -14,24 +15,19 @@ struct serial_device {
 	int (*tstc) (void);
 	void (*putc) (const char c);
 	void (*puts) (const char *s);
-#if CONFIG_POST & CONFIG_SYS_POST_UART
-	void (*loop) (int);
-#endif
 
 	struct serial_device *next;
 };
 
 extern struct serial_device serial_smc_device;
 extern struct serial_device serial_scc_device;
-extern struct serial_device *default_serial_console(void);
+extern struct serial_device * default_serial_console (void);
 
-#if	defined(CONFIG_405GP) || defined(CONFIG_405CR) || \
-	defined(CONFIG_405EP) || defined(CONFIG_405EZ) || \
-	defined(CONFIG_405EX) || defined(CONFIG_440) || \
-	defined(CONFIG_MB86R0x) || defined(CONFIG_MPC5xxx) || \
-	defined(CONFIG_MPC83xx) || defined(CONFIG_MPC85xx) || \
-	defined(CONFIG_MPC86xx) || defined(CONFIG_SYS_SC520) || \
-	defined(CONFIG_TEGRA2) || defined(CONFIG_SYS_COREBOOT)
+#if defined(CONFIG_405GP) || defined(CONFIG_405CR) || defined(CONFIG_440) || \
+    defined(CONFIG_405EP) || defined(CONFIG_405EZ) || defined(CONFIG_405EX) || \
+    defined(CONFIG_MB86R0x) || defined(CONFIG_MPC5xxx) || \
+    defined(CONFIG_MPC83xx) || defined(CONFIG_MPC85xx) || \
+    defined(CONFIG_MPC86xx) || defined(CONFIG_SYS_SC520)
 extern struct serial_device serial0_device;
 extern struct serial_device serial1_device;
 #if defined(CONFIG_SYS_NS16550_SERIAL)
@@ -48,13 +44,6 @@ extern struct serial_device serial1_device;
 extern struct serial_device serial3_device;
 extern struct serial_device serial4_device;
 extern struct serial_device serial6_device;
-#endif
-
-#if defined(CONFIG_XILINX_UARTLITE)
-extern struct serial_device uartlite_serial0_device;
-extern struct serial_device uartlite_serial1_device;
-extern struct serial_device uartlite_serial2_device;
-extern struct serial_device uartlite_serial3_device;
 #endif
 
 #if defined(CONFIG_S3C2410)
@@ -81,18 +70,9 @@ extern struct serial_device serial_ffuart_device;
 extern struct serial_device serial_btuart_device;
 extern struct serial_device serial_stuart_device;
 
-#if defined(CONFIG_SYS_BFIN_UART)
-extern void serial_register_bfin_uart(void);
-extern struct serial_device bfin_serial0_device;
-extern struct serial_device bfin_serial1_device;
-extern struct serial_device bfin_serial2_device;
-extern struct serial_device bfin_serial3_device;
-#endif
-
-extern void serial_register(struct serial_device *);
 extern void serial_initialize(void);
 extern void serial_stdio_init(void);
-extern int serial_assign(const char *name);
+extern int serial_assign(char * name);
 extern void serial_reinit_all(void);
 
 /* For usbtty */

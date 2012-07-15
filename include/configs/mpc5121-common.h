@@ -44,5 +44,8 @@
 #define CONFIG_CMDLINE_EDITING		1	/* command line history */
 /* Use the HUSH parser */
 #define CONFIG_SYS_HUSH_PARSER
+#ifdef CONFIG_SYS_HUSH_PARSER
+#define CONFIG_SYS_PROMPT_HUSH_PS2	"> "
+#endif
 
 #endif /* __MPC5121_COMMON_H */

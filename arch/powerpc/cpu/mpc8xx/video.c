@@ -33,6 +33,7 @@
 #include <common.h>
 #include <config.h>
 #include <version.h>
+#include <timestamp.h>
 #include <i2c.h>
 #include <linux/types.h>
 #include <stdio_dev.h>
@@ -125,7 +126,6 @@ DECLARE_GLOBAL_DATA_PTR;
 /************************************************************************/
 
 #include <video_font.h>			/* Get font data, width and height */
-#include <video_font_data.h>
 
 #ifdef CONFIG_VIDEO_LOGO
 #include <video_logo.h>			/* Get logo data, width and height */

@@ -46,7 +46,7 @@ void show_boot_progress (int status)
 {
 #if defined(CONFIG_STATUS_LED)
 # if defined(STATUS_LED_BOOT)
-	if (status == BOOTSTAGE_ID_RUN_OS) {
+	if (status == 15) {
 		/* ready to transfer to kernel, make sure LED is proper state */
 		status_led_set(STATUS_LED_BOOT, CONFIG_BOOT_LED_STATE);
 	}

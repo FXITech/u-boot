@@ -12,11 +12,11 @@
 #include <common.h>
 #include <command.h>
 #include <stdio_dev.h>
-#include <serial.h>
 #include <environment.h>
 #include <malloc.h>
 #include <mmc.h>
 #include <net.h>
+#include <timestamp.h>
 #include <status_led.h>
 #include <version.h>
 
@@ -39,6 +39,8 @@ int post_flag;
 
 DECLARE_GLOBAL_DATA_PTR;
 
+const char version_string[] = U_BOOT_VERSION " ("U_BOOT_DATE" - "U_BOOT_TIME")";
+
 __attribute__((always_inline))
 static inline void serial_early_puts(const char *s)
 {
@@ -50,7 +52,7 @@ static inline void serial_early_puts(const char *s)
 
 static int display_banner(void)
 {
-	display_options();
+	printf("\n\n%s\n\n", version_string);
 	printf("CPU:   ADSP %s "
 		"(Detected Rev: 0.%d) "
 		"(%s boot)\n",
@@ -62,7 +64,11 @@ static int display_banner(void)
 
 static int init_baudrate(void)
 {
-	gd->baudrate = getenv_ulong("baudrate", 10, CONFIG_BAUDRATE);
+	char baudrate[15];
+	int i = getenv_f("baudrate", baudrate, sizeof(baudrate));
+	gd->bd->bi_baudrate = gd->baudrate = (i > 0)
+	    ? simple_strtoul(baudrate, NULL, 10)
+	    : CONFIG_BAUDRATE;
 	return 0;
 }
 
@@ -86,6 +92,7 @@ static void display_global_data(void)
 	printf(" |-jt(%p): %p\n", gd->jt, *(gd->jt));
 	printf(" \\-bd: %p\n", gd->bd);
 	printf("   |-bi_baudrate: %x\n", bd->bi_baudrate);
+	printf("   |-bi_ip_addr: %lx\n", bd->bi_ip_addr);
 	printf("   |-bi_boot_params: %lx\n", bd->bi_boot_params);
 	printf("   |-bi_memstart: %lx\n", bd->bi_memstart);
 	printf("   |-bi_memsize: %lx\n", bd->bi_memsize);
@@ -180,46 +187,6 @@ void init_cplbtables(void)
 	}
 }
 
-static int global_board_data_init(void)
-{
-#ifndef CONFIG_SYS_GBL_DATA_ADDR
-# define CONFIG_SYS_GBL_DATA_ADDR 0
-#endif
-#ifndef CONFIG_SYS_BD_INFO_ADDR
-# define CONFIG_SYS_BD_INFO_ADDR 0
-#endif
-
-	bd_t *bd;
-
-	if (CONFIG_SYS_GBL_DATA_ADDR) {
-		gd = (gd_t *) (CONFIG_SYS_GBL_DATA_ADDR);
-		memset((void *)gd, 0, GENERATED_GBL_DATA_SIZE);
-	} else {
-		static gd_t _bfin_gd;
-		gd = &_bfin_gd;
-	}
-
-	if (CONFIG_SYS_BD_INFO_ADDR) {
-		bd = (bd_t *) (CONFIG_SYS_BD_INFO_ADDR);
-		memset(bd, 0, GENERATED_BD_INFO_SIZE);
-	} else {
-		static bd_t _bfin_bd;
-		bd = &_bfin_bd;
-	}
-	gd->bd = bd;
-
-	bd->bi_r_version = version_string;
-	bd->bi_cpu = MK_STR(CONFIG_BFIN_CPU);
-	bd->bi_board_name = BFIN_BOARD_NAME;
-	bd->bi_vco = get_vco();
-	bd->bi_cclk = get_cclk();
-	bd->bi_sclk = get_sclk();
-	bd->bi_memstart = CONFIG_SYS_SDRAM_BASE;
-	bd->bi_memsize = CONFIG_SYS_MAX_RAM_SIZE;
-
-	return 0;
-}
-
 /*
  * All attempts to come up with a "common" initialization sequence
  * that works for all boards and architectures failed: some of the
@@ -240,6 +207,8 @@ extern int timer_init(void);
 
 void board_init_f(ulong bootflag)
 {
+	ulong addr;
+	bd_t *bd;
 	char buf[32];
 
 #ifdef CONFIG_BOARD_EARLY_INIT_F
@@ -272,8 +241,26 @@ void board_init_f(ulong bootflag)
 		hang();
 #endif
 	serial_early_puts("Init global data\n");
+	gd = (gd_t *) (CONFIG_SYS_GBL_DATA_ADDR);
+	memset((void *)gd, 0, GENERATED_GBL_DATA_SIZE);
 
-	global_board_data_init();
+	/* Board data initialization */
+	addr = (CONFIG_SYS_GBL_DATA_ADDR + sizeof(gd_t));
+
+	/* Align to 4 byte boundary */
+	addr &= ~(4 - 1);
+	bd = (bd_t *) addr;
+	gd->bd = bd;
+	memset((void *)bd, 0, sizeof(bd_t));
+
+	bd->bi_r_version = version_string;
+	bd->bi_cpu = BFIN_CPU;
+	bd->bi_board_name = BFIN_BOARD_NAME;
+	bd->bi_vco = get_vco();
+	bd->bi_cclk = get_cclk();
+	bd->bi_sclk = get_sclk();
+	bd->bi_memstart = CONFIG_SYS_SDRAM_BASE;
+	bd->bi_memsize = CONFIG_SYS_MAX_RAM_SIZE;
 
 	/* Initialize */
 	serial_early_puts("IRQ init\n");
@@ -284,9 +271,6 @@ void board_init_f(ulong bootflag)
 	init_baudrate();
 	serial_early_puts("Serial init\n");
 	serial_init();
-#ifdef CONFIG_SERIAL_MULTI
-	serial_initialize();
-#endif
 	serial_early_puts("Console init flash\n");
 	console_init_f();
 	serial_early_puts("End of early debugging\n");
@@ -299,11 +283,8 @@ void board_init_f(ulong bootflag)
 	printf("Core: %s MHz, ", strmhz(buf, get_cclk()));
 	printf("System: %s MHz\n", strmhz(buf, get_sclk()));
 
-	if (CONFIG_MEM_SIZE) {
-		printf("RAM:   ");
-		print_size(gd->bd->bi_memsize, "\n");
-	}
-
+	printf("RAM:   ");
+	print_size(bd->bi_memsize, "\n");
 #if defined(CONFIG_POST)
 	post_init_f();
 	post_bootmode_init();
@@ -319,13 +300,21 @@ static void board_net_init_r(bd_t *bd)
 	bb_miiphy_init();
 #endif
 #ifdef CONFIG_CMD_NET
+	char *s;
+
+	if ((s = getenv("bootfile")) != NULL)
+		copy_filename(BootFile, s, sizeof(BootFile));
+
+	bd->bi_ip_addr = getenv_IPaddr("ipaddr");
+
 	printf("Net:   ");
-	eth_initialize(bd);
+	eth_initialize(gd->bd);
 #endif
 }
 
 void board_init_r(gd_t * id, ulong dest_addr)
 {
+	char *s;
 	bd_t *bd;
 	gd = id;
 	gd->flags |= GD_FLG_RELOC;	/* tell others: relocation done */
@@ -387,7 +376,8 @@ void board_init_r(gd_t * id, ulong dest_addr)
 #endif
 
 	/* Initialize from environment */
-	load_addr = getenv_ulong("loadaddr", 16, load_addr);
+	if ((s = getenv("loadaddr")) != NULL)
+		load_addr = simple_strtoul(s, NULL, 16);
 
 #if defined(CONFIG_MISC_INIT_R)
 	/* miscellaneous platform dependent initialisations */
@@ -403,7 +393,7 @@ void board_init_r(gd_t * id, ulong dest_addr)
 		post_run(NULL, POST_RAM | post_bootmode_get(0));
 #endif
 
-	if (CONFIG_MEM_SIZE && bfin_os_log_check()) {
+	if (bfin_os_log_check()) {
 		puts("\nLog buffer from operating system:\n");
 		bfin_os_log_dump();
 		puts("\n");

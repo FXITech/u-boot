@@ -22,7 +22,6 @@
  */
 
 #include <common.h>
-#include <linux/ctype.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -46,7 +45,7 @@ env_callback (uchar *name, uchar *value)
 		nn++;
 	}
 
-	while (isblank(*nn))
+	while (*nn == ' ' || *nn == '\t')
 		nn++;
 
 	if ((nnl = strlen (nn)) == 0) {
@@ -62,7 +61,7 @@ env_callback (uchar *name, uchar *value)
 		nn[--nnl] = '\0';
 	}
 
-	while (nnl > 0 && isblank(nn[nnl - 1]))
+	while (nnl > 0 && ((c = nn[nnl - 1]) == ' ' || c == '\t'))
 		nn[--nnl] = '\0';
 	if (nnl == 0) {
 		printf ("Empty name in global env file\n");
@@ -72,11 +71,11 @@ env_callback (uchar *name, uchar *value)
 	p = (char *)value;
 	q = nv;
 
-	while (isblank(*p))
+	while ((c = *p) == ' ' || c == '\t')
 		p++;
 
 	nvl = strlen (p);
-	while (nvl > 0 && isblank(p[nvl - 1]))
+	while (nvl > 0 && ((c = p[nvl - 1]) == ' ' || c == '\t'))
 		p[--nvl] = '\0';
 
 	while ((*q = *p++) != '\0') {

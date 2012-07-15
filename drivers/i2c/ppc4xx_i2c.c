@@ -396,7 +396,10 @@ static int ppc4xx_i2c_transfer(uchar chip, uint addr, int alen, uchar *buffer,
 #endif
 	if ((ret = i2c_transfer(read, chip << 1, &xaddr[4 - alen], alen,
 				buffer, len)) != 0) {
-		printf("I2C %s: failed %d\n", read ? "read" : "write", ret);
+		if (gd->have_console) {
+			printf("I2C %s: failed %d\n",
+			       read ? "read" : "write", ret);
+		}
 
 		return 1;
 	}

@@ -35,6 +35,7 @@
 #include <asm-offsets.h>
 #include <config.h>
 #include <74xx_7xx.h>
+#include <timestamp.h>
 #include <version.h>
 
 #include <ppc_asm.tmpl>
@@ -49,6 +50,10 @@
     !defined(CONFIG_CPCI750) && \
     !defined(CONFIG_P3Mx)
 #include <galileo/gt64260R.h>
+#endif
+
+#ifndef  CONFIG_IDENT_STRING
+#define  CONFIG_IDENT_STRING ""
 #endif
 
 /* We don't want the  MMU yet.
@@ -72,7 +77,7 @@
 	GOT_ENTRY(transfer_to_handler)
 
 	GOT_ENTRY(__init_end)
-	GOT_ENTRY(__bss_end__)
+	GOT_ENTRY(_end)
 	GOT_ENTRY(__bss_start)
 	END_GOT
 
@@ -84,7 +89,9 @@
 	.long	0x27051956		/* U-Boot Magic Number		*/
 	.globl	version_string
 version_string:
-	.ascii U_BOOT_VERSION_STRING, "\0"
+	.ascii	U_BOOT_VERSION
+	.ascii	" (", U_BOOT_DATE, " - ", U_BOOT_TIME, ")"
+	.ascii	CONFIG_IDENT_STRING, "\0"
 
 	. = EXC_OFF_SYS_RESET
 	.globl	_start
@@ -715,7 +722,7 @@ in_ram:
 	 * Now clear BSS segment
 	 */
 	lwz	r3,GOT(__bss_start)
-	lwz	r4,GOT(__bss_end__)
+	lwz	r4,GOT(_end)
 
 	cmplw	0, r3, r4
 	beq	6f

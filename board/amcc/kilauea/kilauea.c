@@ -307,17 +307,16 @@ int board_pcie_last(void)
 
 int checkboard (void)
 {
-	char buf[64];
-	int i = getenv_f("serial#", buf, sizeof(buf));
+	char *s = getenv("serial#");
 
 	if (is_405exr())
 		printf("Board: Haleakala - AMCC PPC405EXr Evaluation Board");
 	else
 		printf("Board: Kilauea - AMCC PPC405EX Evaluation Board");
 
-	if (i > 0) {
+	if (s != NULL) {
 		puts(", serial# ");
-		puts(buf);
+		puts(s);
 	}
 	printf(" (CPLD rev. %ld)\n", gd->board_type);
 

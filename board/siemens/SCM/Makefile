@@ -24,7 +24,8 @@
 include $(TOPDIR)/config.mk
 
 ifneq ($(OBJTREE),$(SRCTREE))
-$(shell mkdir -p $(obj)../common $(obj)../../tqc/tqm8xx)
+$(shell mkdir -p $(obj)../common)
+$(shell mkdir -p $(obj)../../tqc/tqm8xx)
 endif
 
 LIB	= $(obj)lib$(BOARD).o
@@ -38,6 +39,12 @@ SOBJS	:= $(addprefix $(obj),$(SOBJS))
 
 $(LIB):	$(OBJS)
 	$(call cmd_link_o_target, $(OBJS))
+
+clean:
+	rm -f $(SOBJS) $(OBJS)
+
+distclean:	clean
+	rm -f $(LIB) core *.bak $(obj).depend
 
 #########################################################################
 

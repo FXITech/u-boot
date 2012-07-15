@@ -36,7 +36,7 @@ SECTIONS
     arch/powerpc/cpu/mpc8xx/traps.o	(.text*)
     net/libnet.o			(.text*)
     arch/powerpc/cpu/mpc8xx/libmpc8xx.o	(.text*)
-    *(.text.vsprintf)
+    *(.text.*printf*)
 
     . = env_offset;
     common/env_embedded.o		(.text*)
@@ -56,14 +56,13 @@ SECTIONS
   PROVIDE (erotext = .);
   .reloc   :
   {
+    KEEP(*(.got))
     _GOT2_TABLE_ = .;
     KEEP(*(.got2))
-    KEEP(*(.got))
-    PROVIDE(_GLOBAL_OFFSET_TABLE_ = . + 4);
     _FIXUP_TABLE_ = .;
     KEEP(*(.fixup))
   }
-  __got2_entries = ((_GLOBAL_OFFSET_TABLE_ - _GOT2_TABLE_) >> 2) - 1;
+  __got2_entries = (_FIXUP_TABLE_ - _GOT2_TABLE_) >>2;
   __fixup_entries = (. - _FIXUP_TABLE_)>>2;
 
   .data    :
@@ -100,6 +99,6 @@ SECTIONS
    *(COMMON)
    . = ALIGN(4);
   }
-  __bss_end__ = . ;
+  _end = . ;
   PROVIDE (end = .);
 }

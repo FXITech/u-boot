@@ -225,7 +225,11 @@ static u_int cirrus_set_opts (socket_info_t * s)
 {
 	cirrus_state_t *p = &s->c_state;
 	u_int mask = 0xffff;
-	char buf[200] = {0};
+#if DEBUG
+	char buf[200];
+
+	memset (buf, 0, 200);
+#endif
 
 	if (has_ring == -1)
 		has_ring = 1;

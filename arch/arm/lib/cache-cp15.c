@@ -24,7 +24,7 @@
 #include <common.h>
 #include <asm/system.h>
 
-#if !(defined(CONFIG_SYS_ICACHE_OFF) && defined(CONFIG_SYS_DCACHE_OFF))
+#if !(defined(CONFIG_SYS_NO_ICACHE) && defined(CONFIG_SYS_NO_DCACHE))
 
 #if defined(CONFIG_SYS_ARM_CACHE_WRITETHROUGH)
 #define CACHE_SETUP	0x1a
@@ -33,12 +33,6 @@
 #endif
 
 DECLARE_GLOBAL_DATA_PTR;
-
-void __arm_init_before_mmu(void)
-{
-}
-void arm_init_before_mmu(void)
-	__attribute__((weak, alias("__arm_init_before_mmu")));
 
 static void cp_delay (void)
 {
@@ -71,7 +65,6 @@ static inline void mmu_setup(void)
 	int i;
 	u32 reg;
 
-	arm_init_before_mmu();
 	/* Set up an identity-mapping for all 4GB, rw for everyone */
 	for (i = 0; i < 4096; i++)
 		page_table[i] = i << 20 | (3 << 10) | 0x12;
@@ -92,18 +85,13 @@ static inline void mmu_setup(void)
 	set_cr(reg | CR_M);
 }
 
-static int mmu_enabled(void)
-{
-	return get_cr() & CR_M;
-}
-
 /* cache_bit must be either CR_I or CR_C */
 static void cache_enable(uint32_t cache_bit)
 {
 	uint32_t reg;
 
 	/* The data cache is not active unless the mmu is enabled too */
-	if ((cache_bit == CR_C) && !mmu_enabled())
+	if (cache_bit == CR_C)
 		mmu_setup();
 	reg = get_cr();	/* get control reg. */
 	cp_delay();
@@ -115,22 +103,22 @@ static void cache_disable(uint32_t cache_bit)
 {
 	uint32_t reg;
 
-	reg = get_cr();
-	cp_delay();
-
 	if (cache_bit == CR_C) {
 		/* if cache isn;t enabled no need to disable */
+		reg = get_cr();
 		if ((reg & CR_C) != CR_C)
 			return;
 		/* if disabling data cache, disable mmu too */
 		cache_bit |= CR_M;
-		flush_dcache_all();
+		flush_cache(0, ~0);
 	}
+	reg = get_cr();
+	cp_delay();
 	set_cr(reg & ~cache_bit);
 }
 #endif
 
-#ifdef CONFIG_SYS_ICACHE_OFF
+#ifdef CONFIG_SYS_NO_ICACHE
 void icache_enable (void)
 {
 	return;
@@ -162,7 +150,7 @@ int icache_status(void)
 }
 #endif
 
-#ifdef CONFIG_SYS_DCACHE_OFF
+#ifdef CONFIG_SYS_NO_DCACHE
 void dcache_enable (void)
 {
 	return;

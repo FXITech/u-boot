@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2012 Freescale Semiconductor, Inc.
+ * Copyright 2009 Freescale Semiconductor, Inc.
  *
  * See file CREDITS for list of people who contributed to this
  * project.
@@ -51,14 +51,13 @@ SECTIONS
   PROVIDE (erotext = .);
   .reloc   :
   {
+    KEEP(*(.got))
     _GOT2_TABLE_ = .;
     KEEP(*(.got2))
-    KEEP(*(.got))
-    PROVIDE(_GLOBAL_OFFSET_TABLE_ = . + 4);
     _FIXUP_TABLE_ = .;
     KEEP(*(.fixup))
   }
-  __got2_entries = ((_GLOBAL_OFFSET_TABLE_ - _GOT2_TABLE_) >> 2) - 1;
+  __got2_entries = (_FIXUP_TABLE_ - _GOT2_TABLE_) >> 2;
   __fixup_entries = (. - _FIXUP_TABLE_) >> 2;
 
   .data    :
@@ -88,7 +87,7 @@ SECTIONS
 
   .bootpg ADDR(.text) - 0x1000 :
   {
-    KEEP(arch/powerpc/cpu/mpc85xx/start.o (.bootpg))
+    arch/powerpc/cpu/mpc85xx/start.o	KEEP(*(.bootpg))
   } :text = 0xffff
 
   . = ADDR(.text) + 0x80000;
@@ -102,6 +101,6 @@ SECTIONS
   } :bss
 
   . = ALIGN(4);
-  __bss_end__ = . ;
+  _end = . ;
   PROVIDE (end = .);
 }

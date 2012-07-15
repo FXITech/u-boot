@@ -1,6 +1,14 @@
 #
-# Copyright (C) 2009 Samsung Electronics
-# Minkyu Kang <mk7.kang@samsung.com>
+# (C) Copyright 2000-2003
+# Wolfgang Denk, DENX Software Engineering, wd@denx.de.
+#
+# (C) Copyright 2008
+# Guennadi Liakhovetki, DENX Software Engineering, <lg@denx.de>
+#
+# (C) Copyright 2011 Samsung Electronics Co. Ltd
+#
+# See file CREDITS for list of people who contributed to this
+# project.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -22,7 +30,36 @@ include $(TOPDIR)/config.mk
 
 LIB	= $(obj)lib$(SOC).o
 
-COBJS	+= clock.o power.o soc.o system.o pinmux.o
+#SOBJS	+= reset.o
+COBJS	+= irom_copy.o
+COBJS	+= nand.o
+COBJS	+= nand_cp.o
+ifdef CONFIG_CMD_NAND
+COBJS	+= nand_write_bl.o
+endif
+COBJS	+= onenand_cp.o
+
+ifdef CONFIG_HKDK4212
+COBJS	+= pmic_hkdk4212.o
+else
+ifdef CONFIG_HKDKC210
+COBJS	+= pmic_hkdk4210.o
+else
+COBJS	+= pmic.o
+endif
+endif
+
+ifdef CONFIG_SECURE_BOOT
+COBJS	+= UBOOT_SB20_S5PC210S.o
+COBJS	+= security_check.o
+COBJS	+= ace_sha1.o
+endif
+COBJS	+= reset.o
+COBJS	+= gpio.o
+COBJS	+= movi_partition.o
+COBJS	+= sys_info.o
+COBJS	+= clock.o
+COBJS	+= setup_hsmmc.o
 
 SRCS	:= $(SOBJS:.o=.S) $(COBJS:.o=.c)
 OBJS	:= $(addprefix $(obj),$(COBJS) $(SOBJS))

@@ -49,6 +49,8 @@
 
 #undef CONFIG_USE_IRQ			     /* we don't need IRQ/FIQ stuff */
 
+#define CONFIG_MISC_INIT_R
+
 #define CONFIG_CMDLINE_TAG	   1	     /* enable passing of ATAGs	 */
 #define CONFIG_SETUP_MEMORY_TAGS   1
 
@@ -62,6 +64,7 @@
  * Hardware drivers
  */
 
+#define CONFIG_NET_MULTI
 #define CONFIG_LAN91C96
 #define CONFIG_LAN91C96_BASE	   0x04000300
 #define CONFIG_LAN91C96_EXT_PHY
@@ -85,6 +88,8 @@
 
 #define CONFIG_CONS_INDEX	   1
 #define CONFIG_BAUDRATE		   115200
+#define CONFIG_SYS_BAUDRATE_TABLE	   { 9600, 19200, 38400, 57600, 115200 }
+
 
 /*
  * Command line configuration.
@@ -175,8 +180,6 @@
 #error Unknown Boot Chip-Select number
 #endif
 
-#define PHYS_SRAM		0x20000000
-
 #define CONFIG_SYS_FLASH_BASE		   PHYS_FLASH_1
 
 /*-----------------------------------------------------------------------
@@ -196,8 +199,5 @@
 #define CONFIG_ENV_IS_IN_FLASH	   1
 #define CONFIG_ENV_SIZE		   0x20000	  /* Total Size of Environment Sector */
 #define CONFIG_ENV_OFFSET		   0x20000	  /* environment starts here  */
-
-#define CONFIG_SYS_SDRAM_BASE		PHYS_SDRAM_1
-#define CONFIG_SYS_INIT_SP_ADDR 	PHYS_SRAM
 
 #endif	  /* ! __CONFIG_H */

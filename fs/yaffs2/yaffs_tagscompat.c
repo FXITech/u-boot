@@ -136,8 +136,9 @@ static void yaffs_LoadTagsIntoSpare(yaffs_Spare * sparePtr,
 }
 
 static void yaffs_GetTagsFromSpare(yaffs_Device * dev, yaffs_Spare * sparePtr,
-				   yaffs_TagsUnion *tu)
+				   yaffs_Tags * tagsPtr)
 {
+	yaffs_TagsUnion *tu = (yaffs_TagsUnion *) tagsPtr;
 	int result;
 
 	tu->asBytes[0] = sparePtr->tagByte0;
@@ -149,7 +150,7 @@ static void yaffs_GetTagsFromSpare(yaffs_Device * dev, yaffs_Spare * sparePtr,
 	tu->asBytes[6] = sparePtr->tagByte6;
 	tu->asBytes[7] = sparePtr->tagByte7;
 
-	result = yaffs_CheckECCOnTags(&tu->asTags);
+	result = yaffs_CheckECCOnTags(tagsPtr);
 	if (result > 0) {
 		dev->tagsEccFixed++;
 	} else if (result < 0) {
@@ -436,7 +437,7 @@ int yaffs_TagsCompatabilityReadChunkWithTagsFromNAND(yaffs_Device * dev,
 {
 
 	yaffs_Spare spare;
-	yaffs_TagsUnion tags;
+	yaffs_Tags tags;
 	yaffs_ECCResult eccResult;
 
 	static yaffs_Spare spareFF;
@@ -466,10 +467,10 @@ int yaffs_TagsCompatabilityReadChunkWithTagsFromNAND(yaffs_Device * dev,
 			if (eTags->chunkUsed) {
 				yaffs_GetTagsFromSpare(dev, &spare, &tags);
 
-				eTags->objectId = tags.asTags.objectId;
-				eTags->chunkId = tags.asTags.chunkId;
-				eTags->byteCount = tags.asTags.byteCount;
-				eTags->serialNumber = tags.asTags.serialNumber;
+				eTags->objectId = tags.objectId;
+				eTags->chunkId = tags.chunkId;
+				eTags->byteCount = tags.byteCount;
+				eTags->serialNumber = tags.serialNumber;
 			}
 		}
 

@@ -48,24 +48,19 @@ int __sata_initialize(void)
 		sata_dev_desc[i].block_write = sata_write;
 
 		rc = init_sata(i);
-		if (!rc) {
-			rc = scan_sata(i);
-			if (!rc && (sata_dev_desc[i].lba > 0) &&
-				(sata_dev_desc[i].blksz > 0))
-				init_part(&sata_dev_desc[i]);
-		}
+		rc = scan_sata(i);
+		if ((sata_dev_desc[i].lba > 0) && (sata_dev_desc[i].blksz > 0))
+			init_part(&sata_dev_desc[i]);
 	}
 	sata_curr_device = 0;
 	return rc;
 }
 int sata_initialize(void) __attribute__((weak,alias("__sata_initialize")));
 
-#ifdef CONFIG_PARTITIONS
 block_dev_desc_t *sata_get_dev(int dev)
 {
 	return (dev < CONFIG_SYS_SATA_MAX_DEVICE) ? &sata_dev_desc[dev] : NULL;
 }
-#endif
 
 int do_sata(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
@@ -82,7 +77,7 @@ int do_sata(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	switch (argc) {
 	case 0:
 	case 1:
-		return CMD_RET_USAGE;
+		return cmd_usage(cmdtp);
 	case 2:
 		if (strncmp(argv[1],"inf", 3) == 0) {
 			int i;
@@ -119,7 +114,7 @@ int do_sata(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 			}
 			return rc;
 		}
-		return CMD_RET_USAGE;
+		return cmd_usage(cmdtp);
 	case 3:
 		if (strncmp(argv[1], "dev", 3) == 0) {
 			int dev = (int)simple_strtoul(argv[2], NULL, 10);
@@ -150,7 +145,7 @@ int do_sata(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 			}
 			return rc;
 		}
-		return CMD_RET_USAGE;
+		return cmd_usage(cmdtp);
 
 	default: /* at least 4 args */
 		if (strcmp(argv[1], "read") == 0) {
@@ -186,7 +181,7 @@ int do_sata(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 				n, (n == cnt) ? "OK" : "ERROR");
 			return (n == cnt) ? 0 : 1;
 		} else {
-			return CMD_RET_USAGE;
+			return cmd_usage(cmdtp);
 		}
 
 		return rc;

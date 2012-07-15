@@ -42,7 +42,6 @@
 ****************************************************************************/
 
 #include <common.h>
-#include <linux/compiler.h>
 #include "x86emu/x86emui.h"
 
 /*----------------------------- Implementation ----------------------------*/
@@ -169,7 +168,7 @@ void x86emuOp2_set_byte(u8 op2)
     int mod, rl, rh;
     uint destoffset;
     u8	*destreg;
-    __maybe_unused char *name = 0;
+    char *name = 0;
     int cond = 0;
 
     START_OF_INSTR();

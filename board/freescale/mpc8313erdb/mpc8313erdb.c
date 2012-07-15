@@ -31,9 +31,6 @@
 #include <vsc7385.h>
 #include <ns16550.h>
 #include <nand.h>
-#if defined(CONFIG_MPC83XX_GPIO) && !defined(CONFIG_NAND_SPL)
-#include <asm/gpio.h>
-#endif
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -44,18 +41,6 @@ int board_early_init_f(void)
 
 	if (im->pmc.pmccr1 & PMCCR1_POWER_OFF)
 		gd->flags |= GD_FLG_SILENT;
-#endif
-#if defined(CONFIG_MPC83XX_GPIO) && !defined(CONFIG_NAND_SPL)
-	mpc83xx_gpio_init_f();
-#endif
-
-	return 0;
-}
-
-int board_early_init_r(void)
-{
-#if defined(CONFIG_MPC83XX_GPIO) && !defined(CONFIG_NAND_SPL)
-	mpc83xx_gpio_init_r();
 #endif
 
 	return 0;

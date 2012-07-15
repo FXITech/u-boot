@@ -11,7 +11,6 @@
 /*
  * Processor Settings
  */
-#define CONFIG_BFIN_CPU             bf537-0.2
 #define CONFIG_BFIN_BOOT_MODE       BFIN_BOOT_SPI_MASTER
 
 
@@ -63,6 +62,7 @@
 #define ADI_CMDS_NETWORK	1
 #define CONFIG_BFIN_MAC
 #define CONFIG_RMII
+#define CONFIG_NET_MULTI	1
 #endif
 #define CONFIG_HOSTNAME		bf537-pnav
 /* Uncomment next line to use fixed MAC address */

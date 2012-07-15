@@ -40,7 +40,6 @@
 #include <commproc.h>
 #include <netdev.h>
 #include <asm/cache.h>
-#include <linux/compiler.h>
 
 #if defined(CONFIG_OF_LIBFDT)
 #include <libfdt.h>
@@ -186,7 +185,7 @@ static int check_CPU (long clock, uint pvr, uint immr)
 	uint k, m;
 	char buf[32];
 	char pre = 'X';
-	__maybe_unused char *mid = "xx";
+	char *mid = "xx";
 	char *suf;
 
 	/* the highest 16 bits should be 0x0050 for a 8xx */

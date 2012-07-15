@@ -45,8 +45,4 @@ int		dev_write_net(void *, void *, int);
 
 void dev_stor_init(void);
 
-int display_get_info(int type, struct display_info *di);
-int display_draw_bitmap(ulong bitmap, int x, int y);
-void display_clear(void);
-
 #endif /* _API_PRIVATE_H_ */

@@ -35,6 +35,7 @@
 #endif
 
 #if (defined(CONFIG_CMD_IDE) || \
+     defined(CONFIG_CMD_MG_DISK) || \
      defined(CONFIG_CMD_SATA) || \
      defined(CONFIG_CMD_SCSI) || \
      defined(CONFIG_CMD_USB) || \
@@ -65,6 +66,9 @@ static const struct block_drvr block_drvr[] = {
 #if defined(CONFIG_SYSTEMACE)
 	{ .name = "ace", .get_dev = systemace_get_dev, },
 #endif
+#if defined(CONFIG_CMD_MG_DISK)
+	{ .name = "mgd", .get_dev = mg_disk_get_dev, },
+#endif
 	{ },
 };
 
@@ -76,14 +80,11 @@ block_dev_desc_t *get_dev(char* ifname, int dev)
 	block_dev_desc_t* (*reloc_get_dev)(int dev);
 	char *name;
 
-	if (!ifname)
-		return NULL;
-
 	name = drvr->name;
 #ifdef CONFIG_NEEDS_MANUAL_RELOC
 	name += gd->reloc_off;
 #endif
-	while (drvr->name) {
+	while (name) {
 		name = drvr->name;
 		reloc_get_dev = drvr->get_dev;
 #ifdef CONFIG_NEEDS_MANUAL_RELOC
@@ -104,6 +105,7 @@ block_dev_desc_t *get_dev(char* ifname, int dev)
 #endif
 
 #if (defined(CONFIG_CMD_IDE) || \
+     defined(CONFIG_CMD_MG_DISK) || \
      defined(CONFIG_CMD_SATA) || \
      defined(CONFIG_CMD_SCSI) || \
      defined(CONFIG_CMD_USB) || \
@@ -239,6 +241,7 @@ void dev_print (block_dev_desc_t *dev_desc)
 #endif
 
 #if (defined(CONFIG_CMD_IDE) || \
+     defined(CONFIG_CMD_MG_DISK) || \
      defined(CONFIG_CMD_SATA) || \
      defined(CONFIG_CMD_SCSI) || \
      defined(CONFIG_CMD_USB) || \

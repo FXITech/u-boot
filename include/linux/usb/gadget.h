@@ -411,7 +411,6 @@ struct usb_gadget_ops {
 
 struct device {
 	void		*driver_data;	/* data private to the driver */
-	void            *device_data;   /* data private to the device */
 };
 
 /**
@@ -480,11 +479,6 @@ static inline void set_gadget_data(struct usb_gadget *gadget, void *data)
 static inline void *get_gadget_data(struct usb_gadget *gadget)
 {
 	return gadget->dev.driver_data;
-}
-
-static inline struct usb_gadget *dev_to_usb_gadget(struct device *dev)
-{
-	return container_of(dev, struct usb_gadget, dev);
 }
 
 /* iterates the non-control endpoints; 'tmp' is a struct usb_ep pointer */

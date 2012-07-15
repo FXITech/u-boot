@@ -28,3 +28,5 @@
 PLATFORM_CPPFLAGS += -I$(TOPDIR)
 
 OBJCFLAGS = --remove-section=.ppcenv
+
+LDSCRIPT := $(SRCTREE)/board/hymod/u-boot.lds

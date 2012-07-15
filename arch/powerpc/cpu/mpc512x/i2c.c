@@ -78,8 +78,9 @@ static int wait_for_bb (void)
 	status = mpc_reg_in (&regs->msr);
 
 	while (timeout-- && (status & I2C_BB)) {
+		volatile int temp;
 		mpc_reg_out (&regs->mcr, I2C_STA, I2C_STA);
-		(void)mpc_reg_in(&regs->mdr);
+		temp = mpc_reg_in (&regs->mdr);
 		mpc_reg_out (&regs->mcr, 0, I2C_STA);
 		mpc_reg_out (&regs->mcr, 0, 0);
 		mpc_reg_out (&regs->mcr, I2C_EN, 0);

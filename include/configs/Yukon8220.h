@@ -97,6 +97,7 @@
 #define CONFIG_CMD_SNTP
 
 
+#define CONFIG_NET_MULTI
 #define CONFIG_MII
 
 /*

@@ -15,7 +15,7 @@
  */
 
 #include <common.h>
-#include <linux/compat.h>
+#include <linux/mtd/compat.h>
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/onenand.h>
 #include <malloc.h>
@@ -71,8 +71,9 @@ static int create_bbt(struct mtd_info *mtd, uint8_t * buf,
 	struct mtd_oob_ops ops;
 	int rgn;
 
+#ifndef CONFIG_SYS_ONENAND_QUIET_TEST
 	printk(KERN_INFO "Scanning device for bad blocks\n");
-
+#endif
 	len = 1;
 
 	/* We need only read few bytes from the OOB area */

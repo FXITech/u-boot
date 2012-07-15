@@ -39,6 +39,7 @@ int AT91F_DataflashInit (void)
 	int i, j;
 	int dfcode;
 	int part;
+	int last_part;
 	int found[CONFIG_SYS_MAX_DATAFLASH_BANKS];
 	unsigned char protected;
 
@@ -135,6 +136,7 @@ int AT91F_DataflashInit (void)
 				dataflash_info[i].Device.pages_size) - 1;
 
 		part = 0;
+		last_part = 0;
 		/* set the area addresses */
 		for(j = 0; j < NB_DATAFLASH_AREA; j++) {
 			if(found[i]!=0) {
@@ -145,6 +147,7 @@ int AT91F_DataflashInit (void)
 					dataflash_info[i].Device.area_list[j].end =
 						dataflash_info[i].end_address +
 						dataflash_info[i].logical_address;
+					last_part = 1;
 				} else {
 					dataflash_info[i].Device.area_list[j].end =
 						area_list[part].end +

@@ -1,8 +1,8 @@
 /*
  *  armboot - Startup Code for ARM720 CPU-core
  *
- *  Copyright (c) 2001	Marius GrÃ¶ger <mag@sysgo.de>
- *  Copyright (c) 2002	Alex ZÃ¼pke <azu@sysgo.de>
+ *  Copyright (c) 2001	Marius Gröger <mag@sysgo.de>
+ *  Copyright (c) 2002	Alex Züpke <azu@sysgo.de>
  *
  * See file CREDITS for list of people who contributed to this
  * project.
@@ -91,10 +91,6 @@ _bss_start_ofs:
 
 .globl _bss_end_ofs
 _bss_end_ofs:
-	.word __bss_end__ - _start
-
-.globl _end_ofs
-_end_ofs:
 	.word _end - _start
 
 #ifdef CONFIG_USE_IRQ
@@ -169,6 +165,7 @@ stack_setup:
 	cmp	r0, r6
 	beq	clear_bss		/* skip relocation */
 	mov	r1, r6			/* r1 <- scratch for copy_loop */
+	ldr	r2, _TEXT_BASE
 	ldr	r3, _bss_start_ofs
 	add	r2, r0, r3		/* r2 <- source end address	    */
 
@@ -178,7 +175,7 @@ copy_loop:
 	cmp	r0, r2			/* until source end address [r2]    */
 	blo	copy_loop
 
-#ifndef CONFIG_SPL_BUILD
+#ifndef CONFIG_PRELOADER
 	/*
 	 * fix .rel.dyn relocations
 	 */
@@ -220,9 +217,10 @@ fixnext:
 #endif
 
 clear_bss:
-#ifndef CONFIG_SPL_BUILD
+#ifndef CONFIG_PRELOADER
 	ldr	r0, _bss_start_ofs
 	ldr	r1, _bss_end_ofs
+	ldr	r3, _TEXT_BASE		/* Text base */
 	mov	r4, r6			/* reloc addr */
 	add	r0, r0, r4
 	add	r1, r1, r4
@@ -234,7 +232,7 @@ clbss_l:str	r2, [r0]		/* clear loop...		    */
 	bne	clbss_l
 
 	bl coloured_LED_init
-	bl red_led_on
+	bl red_LED_on
 #endif
 
 /*
@@ -272,7 +270,25 @@ _dynsym_start_ofs:
  *************************************************************************
  */
 
-#if defined(CONFIG_LPC2292)
+#if defined(CONFIG_IMPA7) || defined(CONFIG_EP7312) || defined(CONFIG_ARMADILLO)
+
+/* Interupt-Controller base addresses */
+INTMR1:		.word	0x80000280 @ 32 bit size
+INTMR2:		.word	0x80001280 @ 16 bit size
+INTMR3:		.word	0x80002280 @  8 bit size
+
+/* SYSCONs */
+SYSCON1:	.word	0x80000100
+SYSCON2:	.word	0x80001100
+SYSCON3:	.word	0x80002200
+
+#define CLKCTL	       0x6  /* mask */
+#define CLKCTL_18      0x0  /* 18.432 MHz */
+#define CLKCTL_36      0x2  /* 36.864 MHz */
+#define CLKCTL_49      0x4  /* 49.152 MHz */
+#define CLKCTL_73      0x6  /* 73.728 MHz */
+
+#elif defined(CONFIG_LPC2292)
 PLLCFG_ADR:	.word	PLLCFG
 PLLFEED_ADR:	.word	PLLFEED
 PLLCON_ADR:	.word	PLLCON
@@ -283,7 +299,35 @@ MEMMAP_ADR:	.word	MEMMAP
 #endif
 
 cpu_init_crit:
-#if defined(CONFIG_NETARM)
+#if defined(CONFIG_IMPA7) || defined(CONFIG_EP7312) || defined(CONFIG_ARMADILLO)
+
+	/*
+	 * mask all IRQs by clearing all bits in the INTMRs
+	 */
+	mov	r1, #0x00
+	ldr	r0, INTMR1
+	str	r1, [r0]
+	ldr	r0, INTMR2
+	str	r1, [r0]
+	ldr	r0, INTMR3
+	str	r1, [r0]
+
+	/*
+	 * flush v4 I/D caches
+	 */
+	mov	r0, #0
+	mcr	p15, 0, r0, c7, c7, 0	/* flush v3/v4 cache */
+	mcr	p15, 0, r0, c8, c7, 0	/* flush v4 TLB */
+
+	/*
+	 * disable MMU stuff and caches
+	 */
+	mrc	p15,0,r0,c1,c0
+	bic	r0, r0, #0x00002300	@ clear bits 13, 9:8 (--V- --RS)
+	bic	r0, r0, #0x0000008f	@ clear bits 7, 3:0 (B--- WCAM)
+	orr	r0, r0, #0x00000002	@ set bit 2 (A) Align
+	mcr	p15,0,r0,c1,c0
+#elif defined(CONFIG_NETARM)
 	/*
 	 * prior to software reset : need to set pin PORTC4 to be *HRESET
 	 */
@@ -588,7 +632,19 @@ fiq:
 
 #endif
 
-#if defined(CONFIG_NETARM)
+#if defined(CONFIG_IMPA7) || defined(CONFIG_EP7312) || defined(CONFIG_ARMADILLO)
+	.align	5
+.globl reset_cpu
+reset_cpu:
+	mov	ip, #0
+	mcr	p15, 0, ip, c7, c7, 0		@ invalidate cache
+	mcr	p15, 0, ip, c8, c7, 0		@ flush TLB (v4)
+	mrc	p15, 0, ip, c1, c0, 0		@ get ctrl register
+	bic	ip, ip, #0x000f			@ ............wcam
+	bic	ip, ip, #0x2100			@ ..v....s........
+	mcr	p15, 0, ip, c1, c0, 0		@ ctrl register
+	mov	pc, r0
+#elif defined(CONFIG_NETARM)
 	.align	5
 .globl reset_cpu
 reset_cpu:

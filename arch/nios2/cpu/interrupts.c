@@ -98,26 +98,11 @@ ulong get_timer (ulong base)
 	return (timestamp - base);
 }
 
-/*
- * This function is derived from Blackfin code (read timebase as long long).
- * On Nios2 it just returns the timer value.
- */
-unsigned long long get_ticks(void)
+void set_timer (ulong t)
 {
-	return get_timer(0);
+	timestamp = t;
 }
 
-/*
- * This function is derived from Blackfin code.
- * On Nios2 it returns the number of timer ticks per second.
- */
-ulong get_tbclk(void)
-{
-	ulong tbclk;
-
-	tbclk = CONFIG_SYS_HZ;
-	return tbclk;
-}
 
 /* The board must handle this interrupt if a timer is not
  * provided.

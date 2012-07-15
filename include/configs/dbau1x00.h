@@ -59,6 +59,7 @@
 #define CONFIG_BAUDRATE		115200
 
 /* valid baudrates */
+#define CONFIG_SYS_BAUDRATE_TABLE	{ 9600, 19200, 38400, 57600, 115200 }
 
 #define	CONFIG_TIMESTAMP		/* Print image info with timestamp */
 #undef	CONFIG_BOOTARGS
@@ -207,6 +208,7 @@
 
 #define CONFIG_NR_DRAM_BANKS	2
 
+#define CONFIG_NET_MULTI
 
 #ifdef CONFIG_DBAU1550
 #define MEM_SIZE 192

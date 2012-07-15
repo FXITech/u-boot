@@ -23,8 +23,6 @@
  * MA 02111-1307 USA
  */
 
-#include "config.h"	/* CONFIG_BOARDDIR */
-
 OUTPUT_ARCH(powerpc)
 SECTIONS
 {
@@ -37,12 +35,10 @@ SECTIONS
 	.reloc : {
 		_GOT2_TABLE_ = .;
 		KEEP(*(.got2))
-		KEEP(*(.got))
-		PROVIDE(_GLOBAL_OFFSET_TABLE_ = . + 4);
 		_FIXUP_TABLE_ = .;
 		KEEP(*(.fixup))
 	}
-	__got2_entries = ((_GLOBAL_OFFSET_TABLE_ - _GOT2_TABLE_) >> 2) - 1;
+	__got2_entries = (_FIXUP_TABLE_ - _GOT2_TABLE_) >> 2;
 	__fixup_entries = (. - _FIXUP_TABLE_) >> 2;
 
 	. = ALIGN(8);
@@ -56,18 +52,8 @@ SECTIONS
 	. = ALIGN(8);
 	__init_begin = .;
 	__init_end = .;
-#if defined(CONFIG_FSL_IFC) /* Restrict bootpg at 4K boundry for IFC */
-	.bootpg ADDR(.text) + 0x1000 :
-	{
-		start.o	(.bootpg)
-	}
-#define RESET_VECTOR_OFFSET 0x1ffc /* IFC has 8K sram */
-#elif defined(CONFIG_FSL_ELBC)
-#define RESET_VECTOR_OFFSET 0xffc /* LBC has 4k sram */
-#else
-#error unknown NAND controller
-#endif
-	.resetvec ADDR(.text) + RESET_VECTOR_OFFSET : {
+
+	.resetvec ADDR(.text) + 0xffc : {
 		KEEP(*(.resetvec))
 	} = 0xffff
 
@@ -76,6 +62,6 @@ SECTIONS
 		*(.sbss*)
 		*(.bss*)
 	}
-	__bss_end__ = .;
+	_end = .;
 }
-ASSERT(__init_end <= (0xfff00000 + RESET_VECTOR_OFFSET), "NAND bootstrap too big");
+ASSERT(__init_end <= 0xfff00ffc, "NAND bootstrap too big");

@@ -122,6 +122,7 @@ static char show_config_tab[][15] = {{"PCI0DLL_2     "},  /* 31 */
 
 extern flash_info_t flash_info[];
 
+extern int do_bootm (cmd_tbl_t *, int, int, char *[]);
 extern int do_bootvx (cmd_tbl_t *, int, int, char *[]);
 
 /* ------------------------------------------------------------------------- */
@@ -566,7 +567,7 @@ int do_loadpci(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	volatile unsigned int *ptr;
 	int count = 0;
 	int count2 = 0;
-	int status = 0;
+	int status;
 	char addr[16];
 	char str[] = "\\|/-";
 	char *local_args[2];
@@ -622,7 +623,7 @@ int do_loadpci(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		break;
 	}
 
-	return status;
+	return 0;
 }
 
 U_BOOT_CMD(
@@ -1101,8 +1102,3 @@ U_BOOT_CMD(
 	pldver, 1, 1, do_pldver,
 	"Show PLD version",
 	"Show PLD version)");
-
-int board_eth_init(bd_t *bis)
-{
-	return mv6436x_eth_initialize(bis);
-}

@@ -360,8 +360,6 @@ out:
 		return err;
 	}
 
-	if (file->private_data)
-		kfree(file->private_data);
 	if (file)
 		free(file);
 	if (dentry)
@@ -369,6 +367,10 @@ out:
 	if (dir)
 		free(dir);
 
+	if (file->private_data)
+		kfree(file->private_data);
+	file->private_data = NULL;
+	file->f_pos = 2;
 	return 0;
 }
 
@@ -686,7 +688,6 @@ int ubifs_load(char *filename, u32 addr, u32 size)
 	int i;
 	int count;
 	int last_block_size = 0;
-	char buf [10];
 
 	c->ubi = ubi_open_volume(c->vi.ubi_num, c->vi.vol_id, UBI_READONLY);
 	/* ubifs_findfile will resolve symlinks, so we know that we get
@@ -738,11 +739,8 @@ int ubifs_load(char *filename, u32 addr, u32 size)
 
 	if (err)
 		printf("Error reading file '%s'\n", filename);
-	else {
-	        sprintf(buf, "%X", size);
-		setenv("filesize", buf);
+	else
 		printf("Done\n");
-	}
 
 	ubifs_iput(inode);
 

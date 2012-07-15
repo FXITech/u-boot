@@ -49,6 +49,7 @@
 
 #define CONFIG_CONS_INDEX	1
 #define CONFIG_BAUDRATE		9600
+#define CONFIG_SYS_BAUDRATE_TABLE	{ 9600, 19200, 38400, 57600, 115200 }
 
 #define CONFIG_BOOTDELAY	5
 
@@ -99,6 +100,7 @@
 #undef	CONFIG_PCI_PNP
 #define CONFIG_PCI_SCAN_SHOW		/* print pci devices @ startup	*/
 
+#define CONFIG_NET_MULTI		/* Multi ethernet cards support */
 
 /* #define CONFIG_TULIP */
 /* #define CONFIG_EEPRO100 */

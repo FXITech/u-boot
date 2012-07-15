@@ -13,11 +13,12 @@ include $(TOPDIR)/config.mk
 
 LIB	= $(obj)lib$(CPU).o
 
-EXTRA    := init.elf
+EXTRA    :=
 CEXTRA   := initcode.o
 SEXTRA   := start.o
 SOBJS    := interrupt.o cache.o
 COBJS-$(CONFIG_BOOTCOUNT_LIMIT) += bootcount.o
+COBJS-$(CONFIG_CMD_GPIO) += cmd_gpio.o
 COBJS-y  += cpu.o
 COBJS-y  += gpio.o
 COBJS-y  += interrupts.o
@@ -60,11 +61,6 @@ ifneq ($(CONFIG_BFIN_BOOT_MODE),BFIN_BOOT_BYPASS)
 		exit 1 ; \
 	fi
 endif
-
-$(obj)init.lds: init.lds.S
-	$(CPP) $(CPPFLAGS) $(LDPPFLAGS) -ansi -D__ASSEMBLY__ -P $^ -o $@
-$(obj)init.elf: $(obj)init.lds $(obj)init.o $(obj)initcode.o
-	$(LD) $(LDFLAGS) -T $^ -o $@
 
 #########################################################################
 

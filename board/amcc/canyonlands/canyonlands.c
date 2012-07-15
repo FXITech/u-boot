@@ -293,8 +293,7 @@ int checkboard(void)
 {
 	struct board_bcsr *bcsr_data =
 		(struct board_bcsr *)CONFIG_SYS_BCSR_BASE;
-	char buf[64];
-	int i = getenv_f("serial#", buf, sizeof(buf));
+	char *s = getenv("serial#");
 
 	if (pvr_460ex()) {
 		printf("Board: Canyonlands - AMCC PPC460EX Evaluation Board");
@@ -320,9 +319,9 @@ int checkboard(void)
 
 	printf(", Rev. %X", in_8(&bcsr_data->cpld_rev));
 
-	if (i > 0) {
+	if (s != NULL) {
 		puts(", serial# ");
-		puts(buf);
+		puts(s);
 	}
 	putc('\n');
 

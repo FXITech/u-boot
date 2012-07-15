@@ -1,6 +1,6 @@
 /*
  * (C) Copyright 2007-2008
- * Stelian Pop <stelian@popies.net>
+ * Stelian Pop <stelian.pop@leadtechdesign.com>
  * Lead Tech Design <www.leadtechdesign.com>
  *
  * See file CREDITS for list of people who contributed to this
@@ -23,11 +23,11 @@
  */
 
 #include <common.h>
-#include <asm/io.h>
 #include <asm/arch/hardware.h>
 #include <asm/arch/at91_pit.h>
 #include <asm/arch/at91_pmc.h>
 #include <asm/arch/clk.h>
+#include <asm/arch/io.h>
 #include <div64.h>
 
 #if !defined(CONFIG_AT91FAMILY)
@@ -70,11 +70,11 @@ static inline unsigned long long usec_to_tick(unsigned long long usec)
  */
 int timer_init(void)
 {
-	at91_pmc_t *pmc = (at91_pmc_t *) ATMEL_BASE_PMC;
-	at91_pit_t *pit = (at91_pit_t *) ATMEL_BASE_PIT;
+	at91_pmc_t *pmc = (at91_pmc_t *) AT91_PMC_BASE;
+	at91_pit_t *pit = (at91_pit_t *) AT91_PIT_BASE;
 
 	/* Enable PITC Clock */
-	writel(1 << ATMEL_ID_SYS, &pmc->pcer);
+	writel(1 << AT91_ID_SYS, &pmc->pcer);
 
 	/* Enable PITC */
 	writel(TIMER_LOAD_VAL | AT91_PIT_MR_EN , &pit->mr);
@@ -90,7 +90,7 @@ int timer_init(void)
  */
 unsigned long long get_ticks(void)
 {
-	at91_pit_t *pit = (at91_pit_t *) ATMEL_BASE_PIT;
+	at91_pit_t *pit = (at91_pit_t *) AT91_PIT_BASE;
 
 	ulong now = readl(&pit->piir);
 
@@ -103,28 +103,33 @@ unsigned long long get_ticks(void)
 
 void __udelay(unsigned long usec)
 {
-	unsigned long long start;
+	unsigned long long tmp;
 	ulong tmo;
 
-	start = get_ticks();		/* get current timestamp */
-	tmo = usec_to_tick(usec);	/* convert usecs to ticks */
-	while ((get_ticks() - start) < tmo)
-		;			/* loop till time has passed */
+	tmo = usec_to_tick(usec);
+	tmp = get_ticks() + tmo;	/* get current timestamp */
+
+	while (get_ticks() < tmp)	/* loop till event */
+		;
 }
 
 /*
- * get_timer(base) can be used to check for timeouts or
- * to measure elasped time relative to an event:
+ * reset_timer() and get_timer(base) are a pair of functions that are used by
+ * some timeout/sleep mechanisms in u-boot.
  *
- * ulong start_time = get_timer(0) sets start_time to the current
- * time value.
- * get_timer(start_time) returns the time elapsed since then.
+ * reset_timer() marks the current time as epoch and
+ * get_timer(base) works relative to that epoch.
  *
  * The time is used in CONFIG_SYS_HZ units!
  */
+void reset_timer(void)
+{
+	gd->timer_reset_value = get_ticks();
+}
+
 ulong get_timer(ulong base)
 {
-	return tick_to_time(get_ticks()) - base;
+	return tick_to_time(get_ticks() - gd->timer_reset_value) - base;
 }
 
 /*

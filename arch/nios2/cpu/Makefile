@@ -28,7 +28,6 @@ LIB	= $(obj)lib$(CPU).o
 START	= start.o
 SOBJS	= exceptions.o
 COBJS	= cpu.o interrupts.o sysid.o traps.o epcs.o
-COBJS	+= fdt.o
 
 SRCS	:= $(START:.o=.S) $(SOBJS:.o=.S) $(COBJS:.o=.c)
 OBJS	:= $(addprefix $(obj),$(SOBJS) $(COBJS))

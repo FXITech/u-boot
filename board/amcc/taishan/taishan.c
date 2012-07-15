@@ -193,13 +193,12 @@ int misc_init_r(void)
 
 int checkboard (void)
 {
-	char buf[64];
-	int i = getenv_f("serial#", buf, sizeof(buf));
+	char *s = getenv ("serial#");
 
 	printf ("Board: Taishan - AMCC PPC440GX Evaluation Board");
-	if (i > 0) {
-		puts(", serial# ");
-		puts(buf);
+	if (s != NULL) {
+		puts (", serial# ");
+		puts (s);
 	}
 	putc ('\n');
 

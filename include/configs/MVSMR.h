@@ -35,7 +35,6 @@
 #ifndef CONFIG_SYS_TEXT_BASE
 #define CONFIG_SYS_TEXT_BASE	0xFF800000
 #endif
-#define CONFIG_SYS_LDSCRIPT	"board/matrix_vision/mvsmr/u-boot.lds"
 
 #define CONFIG_SYS_MPC5XXX_CLKIN	33000000
 
@@ -244,6 +243,7 @@
  */
 #define CONFIG_SYS_HUSH_PARSER
 #define CONFIG_CMDLINE_EDITING
+#define CONFIG_SYS_PROMPT_HUSH_PS2 	"> "
 #undef 	CONFIG_SYS_LONGHELP
 #define CONFIG_SYS_PROMPT		"=> "
 #ifdef CONFIG_CMD_KGDB

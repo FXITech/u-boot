@@ -25,7 +25,7 @@ include $(TOPDIR)/config.mk
 
 # CFLAGS += -DET_DEBUG
 
-LIB	= $(obj)lib$(CPU).o
+LIB	= lib$(CPU).o
 
 START	= start.o
 COBJS	= cpu.o speed.o cpu_init.o interrupts.o pci.o

@@ -81,6 +81,5 @@ void pci_init_board(void)
 
 int board_eth_init(bd_t *bis)
 {
-	/* return >= 0 if a chip is found, the board's AX88796L is n2k-based */
-	return ne2k_register() + pci_eth_init(bis);
+	return pci_eth_init(bis);
 }

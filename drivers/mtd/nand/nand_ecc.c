@@ -50,7 +50,7 @@
  * only nand_correct_data() is needed
  */
 
-#if !defined(CONFIG_NAND_SPL) || defined(CONFIG_SPL_NAND_SOFTECC)
+#ifndef CONFIG_NAND_SPL
 /*
  * Pre-calculated 256-way 1 byte column parity
  */

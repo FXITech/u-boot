@@ -26,3 +26,5 @@
 #
 
 PLATFORM_CPPFLAGS += -I$(TOPDIR)
+
+LDSCRIPT := $(SRCTREE)/board/cogent/u-boot.lds

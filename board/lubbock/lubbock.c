@@ -27,9 +27,6 @@
 
 #include <common.h>
 #include <netdev.h>
-#include <asm/arch/pxa.h>
-#include <asm/arch/pxa-regs.h>
-#include <asm/io.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -49,10 +46,6 @@ int board_init (void)
 	/* adress of boot parameters */
 	gd->bd->bi_boot_params = 0xa0000100;
 
-	/* Configure GPIO6 and GPIO8 as OUT, AF1. */
-	setbits_le32(GPDR0, (1 << 6) | (1 << 8));
-	clrsetbits_le32(GAFR0_L, (3 << 12) | (3 << 16), (1 << 12) | (1 << 16));
-
 	return 0;
 }
 
@@ -63,9 +56,10 @@ int board_late_init(void)
 	return 0;
 }
 
+extern void pxa_dram_init(void);
 int dram_init(void)
 {
-	pxa2xx_dram_init();
+	pxa_dram_init();
 	gd->ram_size = PHYS_SDRAM_1_SIZE;
 	return 0;
 }

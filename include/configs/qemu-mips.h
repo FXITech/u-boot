@@ -40,6 +40,9 @@
 
 #define CONFIG_BAUDRATE		115200
 
+/* valid baudrates */
+#define CONFIG_SYS_BAUDRATE_TABLE	{ 9600, 19200, 38400, 57600, 115200 }
+
 #define CONFIG_TIMESTAMP		/* Print image info with timestamp */
 #undef CONFIG_BOOTARGS
 
@@ -105,6 +108,7 @@
 #define CONFIG_AUTO_COMPLETE
 #define CONFIG_CMDLINE_EDITING
 #define CONFIG_SYS_HUSH_PARSER
+#define CONFIG_SYS_PROMPT_HUSH_PS2	"> "
 
 #define CONFIG_SYS_CBSIZE		256		/* Console I/O Buffer Size */
 #define CONFIG_SYS_PBSIZE (CONFIG_SYS_CBSIZE+sizeof(CONFIG_SYS_PROMPT)+16)  /* Print Buffer Size */
@@ -152,6 +156,8 @@
 #define CONFIG_ENV_SIZE		0x8000
 
 #define CONFIG_ENV_OVERWRITE	1
+
+#undef CONFIG_NET_MULTI
 
 #define MEM_SIZE		128
 

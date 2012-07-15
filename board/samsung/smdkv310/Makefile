@@ -1,5 +1,11 @@
 #
-# Copyright (C) 2011 Samsung Electronics
+# (C) Copyright 2000, 2001, 2002
+# Wolfgang Denk, DENX Software Engineering, wd@denx.de.
+#
+# (C) Copyright 2008
+# Guennadi Liakhovetki, DENX Software Engineering, <lg@denx.de>
+#
+# (C) Copyright 2011 Samsung Electronics Co. Ltd
 #
 # See file CREDITS for list of people who contributed to this
 # project.
@@ -24,34 +30,22 @@ include $(TOPDIR)/config.mk
 
 LIB	= $(obj)lib$(BOARD).o
 
-SOBJS	:= mem_setup.o
-SOBJS	+= lowlevel_init.o
-ifndef CONFIG_SPL_BUILD
-COBJS	+= smdkv310.o
-endif
+COBJS-y	:= smdkv310.o
+SOBJS	:= lowlevel_init.o
+SOBJS	+= mem_setup.o
 
-ifdef CONFIG_SPL_BUILD
-COBJS	+= mmc_boot.o
-endif
+SRCS    := $(SOBJS:.o=.S) $(COBJS-y:.o=.c)
+OBJS	:= $(addprefix $(obj),$(COBJS-y))
+SOBJS	:= $(addprefix $(obj),$(SOBJS))
 
-SRCS	:= $(SOBJS:.o=.S) $(COBJS:.o=.c)
-OBJS	:= $(addprefix $(obj),$(COBJS) $(SOBJS))
+$(LIB):	$(obj).depend $(SOBJS) $(OBJS)
+	$(call cmd_link_o_target, $(SOBJS) $(OBJS))
 
-ALL	:=	 $(obj).depend $(LIB)
+clean:
+	rm -f $(SOBJS) $(OBJS)
 
-ifdef CONFIG_SPL_BUILD
-ALL	+= $(OBJTREE)/tools/mk$(BOARD)spl
-endif
-
-all:	$(ALL)
-
-$(LIB):	$(OBJS)
-	$(call cmd_link_o_target, $(OBJS))
-
-ifdef CONFIG_SPL_BUILD
-$(OBJTREE)/tools/mk$(BOARD)spl:	tools/mkv310_image.c
-	$(HOSTCC) tools/mkv310_image.c -o $(OBJTREE)/tools/mk$(BOARD)spl
-endif
+distclean:	clean
+	rm -f $(LIB) core *.bak $(obj).depend
 
 #########################################################################
 

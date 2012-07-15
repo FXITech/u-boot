@@ -23,7 +23,6 @@
 
 #include "mkimage.h"
 #include <image.h>
-#include <version.h>
 
 static void copy_file(int, const char *, int);
 static void usage(void);
@@ -156,14 +155,8 @@ main (int argc, char **argv)
 	init_imx_image_type ();
 	/* Init FIT image generation/list support */
 	init_fit_image_type ();
-	/* Init TI OMAP Boot image generation/list support */
-	init_omap_image_type();
 	/* Init Default image generation/list support */
 	init_default_image_type ();
-	/* Init Davinci UBL support */
-	init_ubl_image_type();
-	/* Init Davinci AIS support */
-	init_ais_image_type();
 
 	params.cmdname = *argv;
 	params.addr = params.ep = 0;
@@ -250,15 +243,9 @@ main (int argc, char **argv)
 					usage ();
 				params.imagename = *++argv;
 				goto NXTARG;
-			case 's':
-				params.skipcpy = 1;
-				break;
 			case 'v':
 				params.vflag++;
 				break;
-			case 'V':
-				printf("mkimage version %s\n", PLAIN_VERSION);
-				exit(EXIT_SUCCESS);
 			case 'x':
 				params.xflag++;
 				break;
@@ -366,15 +353,11 @@ NXTARG:		;
 	}
 
 	/*
-	 * In case there an header with a variable
-	 * length will be added, the corresponding
-	 * function is called. This is responsible to
-	 * allocate memory for the header itself.
+	 * Must be -w then:
+	 *
+	 * write dummy header, to be fixed later
 	 */
-	if (tparams->vrec_header)
-		tparams->vrec_header(&params, tparams);
-	else
-		memset(tparams->hdr, 0, tparams->header_size);
+	memset (tparams->hdr, 0, tparams->header_size);
 
 	if (write(ifd, tparams->hdr, tparams->header_size)
 					!= tparams->header_size) {
@@ -383,66 +366,63 @@ NXTARG:		;
 		exit (EXIT_FAILURE);
 	}
 
-	if (!params.skipcpy) {
-		if (params.type == IH_TYPE_MULTI ||
-		    params.type == IH_TYPE_SCRIPT) {
-			char *file = params.datafile;
-			uint32_t size;
+	if (params.type == IH_TYPE_MULTI || params.type == IH_TYPE_SCRIPT) {
+		char *file = params.datafile;
+		uint32_t size;
 
-			for (;;) {
-				char *sep = NULL;
+		for (;;) {
+			char *sep = NULL;
 
-				if (file) {
-					if ((sep = strchr(file, ':')) != NULL) {
-						*sep = '\0';
-					}
-
-					if (stat (file, &sbuf) < 0) {
-						fprintf (stderr, "%s: Can't stat %s: %s\n",
-							 params.cmdname, file, strerror(errno));
-						exit (EXIT_FAILURE);
-					}
-					size = cpu_to_uimage (sbuf.st_size);
-				} else {
-					size = 0;
+			if (file) {
+				if ((sep = strchr(file, ':')) != NULL) {
+					*sep = '\0';
 				}
 
-				if (write(ifd, (char *)&size, sizeof(size)) != sizeof(size)) {
-					fprintf (stderr, "%s: Write error on %s: %s\n",
-						 params.cmdname, params.imagefile,
-						 strerror(errno));
+				if (stat (file, &sbuf) < 0) {
+					fprintf (stderr, "%s: Can't stat %s: %s\n",
+						params.cmdname, file, strerror(errno));
 					exit (EXIT_FAILURE);
 				}
-
-				if (!file) {
-					break;
-				}
-
-				if (sep) {
-					*sep = ':';
-					file = sep + 1;
-				} else {
-					file = NULL;
-				}
+				size = cpu_to_uimage (sbuf.st_size);
+			} else {
+				size = 0;
 			}
 
-			file = params.datafile;
-
-			for (;;) {
-				char *sep = strchr(file, ':');
-				if (sep) {
-					*sep = '\0';
-					copy_file (ifd, file, 1);
-					*sep++ = ':';
-					file = sep;
-				} else {
-					copy_file (ifd, file, 0);
-					break;
-				}
+			if (write(ifd, (char *)&size, sizeof(size)) != sizeof(size)) {
+				fprintf (stderr, "%s: Write error on %s: %s\n",
+					params.cmdname, params.imagefile,
+					strerror(errno));
+				exit (EXIT_FAILURE);
 			}
-		} else {
-			copy_file (ifd, params.datafile, 0);
+
+			if (!file) {
+				break;
+			}
+
+			if (sep) {
+				*sep = ':';
+				file = sep + 1;
+			} else {
+				file = NULL;
+			}
 		}
+
+		file = params.datafile;
+
+		for (;;) {
+			char *sep = strchr(file, ':');
+			if (sep) {
+				*sep = '\0';
+				copy_file (ifd, file, 1);
+				*sep++ = ':';
+				file = sep;
+			} else {
+				copy_file (ifd, file, 0);
+				break;
+			}
+		}
+	} else {
+		copy_file (ifd, params.datafile, 0);
 	}
 
 	/* We're a bit of paranoid */
@@ -609,8 +589,6 @@ usage ()
 			 "          -x ==> set XIP (execute in place)\n",
 		params.cmdname);
 	fprintf (stderr, "       %s [-D dtc_options] -f fit-image.its fit-image\n",
-		params.cmdname);
-	fprintf (stderr, "       %s -V ==> print version information and exit\n",
 		params.cmdname);
 
 	exit (EXIT_FAILURE);

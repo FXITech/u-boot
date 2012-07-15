@@ -36,6 +36,9 @@
 #define DEBUG
 #undef DEBUG
 
+/* U-Boot routines needed */
+extern int do_reset (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
+
 /*****************************************************************************
  *
  * This is the API core.
@@ -553,50 +556,6 @@ static int API_env_enum(va_list ap)
 	return 0;
 }
 
-/*
- * pseudo signature:
- *
- * int API_display_get_info(int type, struct display_info *di)
- */
-static int API_display_get_info(va_list ap)
-{
-	int type;
-	struct display_info *di;
-
-	type = va_arg(ap, int);
-	di = va_arg(ap, struct display_info *);
-
-	return display_get_info(type, di);
-}
-
-/*
- * pseudo signature:
- *
- * int API_display_draw_bitmap(ulong bitmap, int x, int y)
- */
-static int API_display_draw_bitmap(va_list ap)
-{
-	ulong bitmap;
-	int x, y;
-
-	bitmap = va_arg(ap, ulong);
-	x = va_arg(ap, int);
-	y = va_arg(ap, int);
-
-	return display_draw_bitmap(bitmap, x, y);
-}
-
-/*
- * pseudo signature:
- *
- * void API_display_clear(void)
- */
-static int API_display_clear(va_list ap)
-{
-	display_clear();
-	return 0;
-}
-
 static cfp_t calls_table[API_MAXCALL] = { NULL, };
 
 /*
@@ -660,9 +619,6 @@ void api_init(void)
 	calls_table[API_ENV_GET] = &API_env_get;
 	calls_table[API_ENV_SET] = &API_env_set;
 	calls_table[API_ENV_ENUM] = &API_env_enum;
-	calls_table[API_DISPLAY_GET_INFO] = &API_display_get_info;
-	calls_table[API_DISPLAY_DRAW_BITMAP] = &API_display_draw_bitmap;
-	calls_table[API_DISPLAY_CLEAR] = &API_display_clear;
 	calls_no = API_MAXCALL;
 
 	debugf("API initialized with %d calls\n", calls_no);

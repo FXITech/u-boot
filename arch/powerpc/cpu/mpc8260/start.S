@@ -28,6 +28,7 @@
 #include <asm-offsets.h>
 #include <config.h>
 #include <mpc8260.h>
+#include <timestamp.h>
 #include <version.h>
 
 #define CONFIG_8260 1		/* needed for Linux kernel header files */
@@ -39,6 +40,10 @@
 #include <asm/cache.h>
 #include <asm/mmu.h>
 #include <asm/u-boot.h>
+
+#ifndef  CONFIG_IDENT_STRING
+#define  CONFIG_IDENT_STRING ""
+#endif
 
 /* We don't want the  MMU yet.
 */
@@ -65,7 +70,7 @@
 	GOT_ENTRY(transfer_to_handler)
 
 	GOT_ENTRY(__init_end)
-	GOT_ENTRY(__bss_end__)
+	GOT_ENTRY(_end)
 	GOT_ENTRY(__bss_start)
 #if defined(CONFIG_HYMOD)
 	GOT_ENTRY(environment)
@@ -82,7 +87,9 @@
 	.data
 	.globl	version_string
 version_string:
-	.ascii U_BOOT_VERSION_STRING, "\0"
+	.ascii U_BOOT_VERSION
+	.ascii " (", U_BOOT_DATE, " - ", U_BOOT_TIME, ")"
+	.ascii CONFIG_IDENT_STRING, "\0"
 
 /*
  *  Hard Reset Configuration Word (HRCW) table
@@ -920,7 +927,7 @@ clear_bss:
 	 */
 	lwz	r4,GOT(environment)
 #else
-	lwz	r4,GOT(__bss_end__)
+	lwz	r4,GOT(_end)
 #endif
 
 	cmplw	0, r3, r4

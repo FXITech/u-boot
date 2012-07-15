@@ -40,7 +40,7 @@ compute_ranksize(unsigned int mem_type, unsigned char row_dens)
 	/* Bottom 5 bits up to the top. */
 	bsize = ((row_dens >> 5) | ((row_dens & 31) << 3));
 	bsize <<= 27ULL;
-	debug("DDR: DDR II rank density = 0x%16llx\n", bsize);
+	debug("DDR: DDR II rank density = 0x%08x\n", bsize);
 
 	return bsize;
 }
@@ -250,27 +250,24 @@ ddr_compute_dimm_parameters(const ddr2_spd_eeprom_t *spd,
 	pdimm->primary_sdram_width = spd->primw;
 	pdimm->ec_sdram_width = spd->ecw;
 
-	/* These are all the types defined by the JEDEC DDR2 SPD 1.3 spec */
+	/* FIXME: what about registered SO-DIMM? */
 	switch (spd->dimm_type) {
-	case DDR2_SPD_DIMMTYPE_RDIMM:
-	case DDR2_SPD_DIMMTYPE_72B_SO_RDIMM:
-	case DDR2_SPD_DIMMTYPE_MINI_RDIMM:
-		/* Registered/buffered DIMMs */
-		pdimm->registered_dimm = 1;
+	case 0x01:	/* RDIMM */
+	case 0x10:	/* Mini-RDIMM */
+		pdimm->registered_dimm = 1; /* register buffered */
 		break;
 
-	case DDR2_SPD_DIMMTYPE_UDIMM:
-	case DDR2_SPD_DIMMTYPE_SO_DIMM:
-	case DDR2_SPD_DIMMTYPE_MICRO_DIMM:
-	case DDR2_SPD_DIMMTYPE_MINI_UDIMM:
-		/* Unbuffered DIMMs */
-		pdimm->registered_dimm = 0;
+	case 0x02:	/* UDIMM */
+	case 0x04:	/* SO-DIMM */
+	case 0x08:	/* Micro-DIMM */
+	case 0x20:	/* Mini-UDIMM */
+		pdimm->registered_dimm = 0;	/* unbuffered */
 		break;
 
-	case DDR2_SPD_DIMMTYPE_72B_SO_CDIMM:
 	default:
 		printf("unknown dimm_type 0x%02X\n", spd->dimm_type);
 		return 1;
+		break;
 	}
 
 	/* SDRAM device parameters */

@@ -55,10 +55,9 @@ SECTIONS
   PROVIDE (erotext = .);
   .reloc   :
   {
+    KEEP(*(.got))
     _GOT2_TABLE_ = .;
     KEEP(*(.got2))
-    KEEP(*(.got))
-    PROVIDE(_GLOBAL_OFFSET_TABLE_ = . + 4);
     _FIXUP_TABLE_ = .;
     KEEP(*(.fixup))
   }
@@ -124,6 +123,6 @@ SECTIONS
   } :bss
 
   . = ALIGN(4);
-  __bss_end__ = . ;
+  _end = . ;
   PROVIDE (end = .);
 }

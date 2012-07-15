@@ -48,10 +48,7 @@ struct s5p_uart {
 	unsigned char	res3[0x3d0];
 };
 
-static inline int s5p_uart_divslot(void)
-{
-	return 1;
-}
+static int use_divslot = 1;
 
 #endif	/* __ASSEMBLY__ */
 

@@ -252,6 +252,7 @@
  */
 #define CONFIG_CMD_DATE
 #define CONFIG_CMD_DTT
+#define CONFIG_CMD_LOG
 #define CONFIG_CMD_PCI
 #define CONFIG_CMD_SNTP
 

@@ -39,6 +39,5 @@ int db64360_eth0_transmit(unsigned int s, volatile char *p);
 void db64360_eth0_disable(void);
 bool network_start(bd_t *bis);
 
-int mv6446x_eth_initialize(bd_t *);
 
 #endif /* __EVB64360_ETH_H__ */

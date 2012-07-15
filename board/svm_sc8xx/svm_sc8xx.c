@@ -75,26 +75,27 @@ const uint sdram_table[] =
  * Return 1 for "SC8xx" type, 0 else.
  */
 
-int checkboard(void)
+int checkboard (void)
 {
-	char buf[64];
-	int i;
-	int l = getenv_f("serial#", buf, sizeof(buf));
+    char *s = getenv("serial#");
+    int board_type;
 
-	if (l < 0 || strncmp(buf, "SVM8", 4)) {
-		printf("### No HW ID - assuming SVM SC8xx\n");
-		return (0);
-	}
+    if (!s || strncmp(s, "SVM8", 4)) {
+	printf ("### No HW ID - assuming SVM SC8xx\n");
+	return (0);
+    }
 
-	for (i = 0; i < l; ++i) {
-		if (buf[i] == ' ')
-			break;
-		putc(buf[i]);
-	}
+    board_type = 1;
 
-	putc('\n');
+    for (; *s; ++s) {
+	if (*s == ' ')
+	    break;
+	putc (*s);
+    }
 
-	return 0;
+    putc ('\n');
+
+    return (0);
 }
 
 /* ------------------------------------------------------------------------- */

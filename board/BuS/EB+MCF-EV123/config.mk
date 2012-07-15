@@ -22,6 +22,7 @@
 # MA 02111-1307 USA
 #
 
+sinclude $(OBJTREE)/board/$(BOARDDIR)/textbase.mk
 ifndef CONFIG_SYS_TEXT_BASE
 CONFIG_SYS_TEXT_BASE = 0xFE000000
 endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2011 Freescale Semiconductor, Inc.
+ * Copyright (C) 2006-2010 Freescale Semiconductor, Inc.
  *
  * Dave Liu <daveliu@freescale.com>
  *
@@ -30,7 +30,6 @@
 #include "uec.h"
 #include "uec_phy.h"
 #include "miiphy.h"
-#include <phy.h>
 
 /* Default UTBIPAR SMI address */
 #ifndef CONFIG_UTBIPAR_INIT_TBIPA
@@ -67,6 +66,9 @@ static uec_info_t uec_info[] = {
 #define MAXCONTROLLERS	(8)
 
 static struct eth_device *devlist[MAXCONTROLLERS];
+
+u16 phy_read (struct uec_mii_info *mii_info, u16 regnum);
+void phy_write (struct uec_mii_info *mii_info, u16 regnum, u16 val);
 
 static int uec_mac_enable(uec_private_t *uec, comm_dir_e mode)
 {
@@ -264,10 +266,13 @@ static int uec_open(uec_private_t *uec, comm_dir_e mode)
 
 static int uec_stop(uec_private_t *uec, comm_dir_e mode)
 {
+	ucc_fast_private_t	*uccf;
+
 	if (!uec || !uec->uccf) {
 		printf("%s: No handle passed.\n", __FUNCTION__);
 		return -EINVAL;
 	}
+	uccf = uec->uccf;
 
 	/* check if the UCC number is in range. */
 	if (uec->uec_info->uf_info.ucc_num >= UCC_MAX_NUM) {
@@ -319,9 +324,10 @@ static int uec_set_mac_duplex(uec_private_t *uec, int duplex)
 }
 
 static int uec_set_mac_if_mode(uec_private_t *uec,
-		phy_interface_t if_mode, int speed)
+		enum fsl_phy_enet_if if_mode, int speed)
 {
-	phy_interface_t		enet_if_mode;
+	enum fsl_phy_enet_if	enet_if_mode;
+	uec_info_t		*uec_info;
 	uec_t			*uec_regs;
 	u32			upsmr;
 	u32			maccfg2;
@@ -331,6 +337,7 @@ static int uec_set_mac_if_mode(uec_private_t *uec,
 		return -EINVAL;
 	}
 
+	uec_info = uec->uec_info;
 	uec_regs = uec->uec_regs;
 	enet_if_mode = if_mode;
 
@@ -341,15 +348,15 @@ static int uec_set_mac_if_mode(uec_private_t *uec,
 	upsmr &= ~(UPSMR_RPM | UPSMR_TBIM | UPSMR_R10M | UPSMR_RMM);
 
 	switch (speed) {
-		case SPEED_10:
+		case 10:
 			maccfg2 |= MACCFG2_INTERFACE_MODE_NIBBLE;
 			switch (enet_if_mode) {
-				case PHY_INTERFACE_MODE_MII:
+				case MII:
 					break;
-				case PHY_INTERFACE_MODE_RGMII:
+				case RGMII:
 					upsmr |= (UPSMR_RPM | UPSMR_R10M);
 					break;
-				case PHY_INTERFACE_MODE_RMII:
+				case RMII:
 					upsmr |= (UPSMR_R10M | UPSMR_RMM);
 					break;
 				default:
@@ -357,15 +364,15 @@ static int uec_set_mac_if_mode(uec_private_t *uec,
 					break;
 			}
 			break;
-		case SPEED_100:
+		case 100:
 			maccfg2 |= MACCFG2_INTERFACE_MODE_NIBBLE;
 			switch (enet_if_mode) {
-				case PHY_INTERFACE_MODE_MII:
+				case MII:
 					break;
-				case PHY_INTERFACE_MODE_RGMII:
+				case RGMII:
 					upsmr |= UPSMR_RPM;
 					break;
-				case PHY_INTERFACE_MODE_RMII:
+				case RMII:
 					upsmr |= UPSMR_RMM;
 					break;
 				default:
@@ -373,24 +380,23 @@ static int uec_set_mac_if_mode(uec_private_t *uec,
 					break;
 			}
 			break;
-		case SPEED_1000:
+		case 1000:
 			maccfg2 |= MACCFG2_INTERFACE_MODE_BYTE;
 			switch (enet_if_mode) {
-				case PHY_INTERFACE_MODE_GMII:
+				case GMII:
 					break;
-				case PHY_INTERFACE_MODE_TBI:
+				case TBI:
 					upsmr |= UPSMR_TBIM;
 					break;
-				case PHY_INTERFACE_MODE_RTBI:
+				case RTBI:
 					upsmr |= (UPSMR_RPM | UPSMR_TBIM);
 					break;
-				case PHY_INTERFACE_MODE_RGMII_RXID:
-				case PHY_INTERFACE_MODE_RGMII_TXID:
-				case PHY_INTERFACE_MODE_RGMII_ID:
-				case PHY_INTERFACE_MODE_RGMII:
+				case RGMII_RXID:
+				case RGMII_ID:
+				case RGMII:
 					upsmr |= UPSMR_RPM;
 					break;
-				case PHY_INTERFACE_MODE_SGMII:
+				case SGMII:
 					upsmr |= UPSMR_SGMM;
 					break;
 				default:
@@ -511,10 +517,12 @@ bus_fail:
 static void adjust_link(struct eth_device *dev)
 {
 	uec_private_t		*uec = (uec_private_t *)dev->priv;
+	uec_t			*uec_regs;
 	struct uec_mii_info	*mii_info = uec->mii_info;
 
 	extern void change_phy_interface_mode(struct eth_device *dev,
-				 phy_interface_t mode, int speed);
+				 enum fsl_phy_enet_if mode, int speed);
+	uec_regs = uec->uec_regs;
 
 	if (mii_info->link) {
 		/* Now we make sure that we can be in full duplex mode.
@@ -531,19 +539,19 @@ static void adjust_link(struct eth_device *dev)
 		}
 
 		if (mii_info->speed != uec->oldspeed) {
-			phy_interface_t mode =
+			enum fsl_phy_enet_if	mode = \
 				uec->uec_info->enet_interface_type;
 			if (uec->uec_info->uf_info.eth_type == GIGA_ETH) {
 				switch (mii_info->speed) {
-				case SPEED_1000:
+				case 1000:
 					break;
-				case SPEED_100:
+				case 100:
 					printf ("switching to rgmii 100\n");
-					mode = PHY_INTERFACE_MODE_RGMII;
+					mode = RGMII;
 					break;
-				case SPEED_10:
+				case 10:
 					printf ("switching to rgmii 10\n");
-					mode = PHY_INTERFACE_MODE_RGMII;
+					mode = RGMII;
 					break;
 				default:
 					printf("%s: Ack,Speed(%d)is illegal\n",
@@ -580,26 +588,8 @@ static void phy_change(struct eth_device *dev)
 {
 	uec_private_t	*uec = (uec_private_t *)dev->priv;
 
-#if defined(CONFIG_P1012) || defined(CONFIG_P1016) || \
-    defined(CONFIG_P1021) || defined(CONFIG_P1025)
-	ccsr_gur_t *gur = (void *)(CONFIG_SYS_MPC85xx_GUTS_ADDR);
-
-	/* QE9 and QE12 need to be set for enabling QE MII managment signals */
-	setbits_be32(&gur->pmuxcr, MPC85xx_PMUXCR_QE9);
-	setbits_be32(&gur->pmuxcr, MPC85xx_PMUXCR_QE12);
-#endif
-
 	/* Update the link, speed, duplex */
 	uec->mii_info->phyinfo->read_status(uec->mii_info);
-
-#if defined(CONFIG_P1012) || defined(CONFIG_P1016) || \
-    defined(CONFIG_P1021) || defined(CONFIG_P1025)
-	/*
-	 * QE12 is muxed with LBCTL, it needs to be released for enabling
-	 * LBCTL signal for LBC usage.
-	 */
-	clrbits_be32(&gur->pmuxcr, MPC85xx_PMUXCR_QE12);
-#endif
 
 	/* Adjust the interface according to speed */
 	adjust_link(dev);
@@ -1107,8 +1097,8 @@ static int uec_startup(uec_private_t *uec)
 	out_be32(&uec_regs->utbipar, utbipar);
 
 	/* Configure the TBI for SGMII operation */
-	if ((uec->uec_info->enet_interface_type == PHY_INTERFACE_MODE_SGMII) &&
-	   (uec->uec_info->speed == SPEED_1000)) {
+	if ((uec->uec_info->enet_interface_type == SGMII) &&
+	   (uec->uec_info->speed == 1000)) {
 		uec_write_phy_reg(uec->dev, uec_regs->utbipar,
 			ENET_TBI_MII_ANA, TBIANA_SETTINGS);
 
@@ -1208,21 +1198,10 @@ static int uec_init(struct eth_device* dev, bd_t *bd)
 	uec_private_t		*uec;
 	int			err, i;
 	struct phy_info         *curphy;
-#if defined(CONFIG_P1012) || defined(CONFIG_P1016) || \
-    defined(CONFIG_P1021) || defined(CONFIG_P1025)
-	ccsr_gur_t *gur = (void *)(CONFIG_SYS_MPC85xx_GUTS_ADDR);
-#endif
 
 	uec = (uec_private_t *)dev->priv;
 
 	if (uec->the_first_run == 0) {
-#if defined(CONFIG_P1012) || defined(CONFIG_P1016) || \
-    defined(CONFIG_P1021) || defined(CONFIG_P1025)
-	/* QE9 and QE12 need to be set for enabling QE MII managment signals */
-	setbits_be32(&gur->pmuxcr, MPC85xx_PMUXCR_QE9);
-	setbits_be32(&gur->pmuxcr, MPC85xx_PMUXCR_QE12);
-#endif
-
 		err = init_phy(dev);
 		if (err) {
 			printf("%s: Cannot initialize PHY, aborting.\n",
@@ -1248,12 +1227,6 @@ static int uec_init(struct eth_device* dev, bd_t *bd)
 				break;
 			udelay(100000);
 		} while (1);
-
-#if defined(CONFIG_P1012) || defined(CONFIG_P1016) || \
-    defined(CONFIG_P1021) || defined(CONFIG_P1025)
-		/* QE12 needs to be released for enabling LBCTL signal*/
-		clrbits_be32(&gur->pmuxcr, MPC85xx_PMUXCR_QE12);
-#endif
 
 		if (err || i <= 0)
 			printf("warning: %s: timeout on PHY link\n", dev->name);
@@ -1288,7 +1261,7 @@ static void uec_halt(struct eth_device* dev)
 	uec_stop(uec, COMM_DIR_RX_AND_TX);
 }
 
-static int uec_send(struct eth_device *dev, void *buf, int len)
+static int uec_send(struct eth_device* dev, volatile void *buf, int len)
 {
 	uec_private_t		*uec;
 	ucc_fast_private_t	*uccf;

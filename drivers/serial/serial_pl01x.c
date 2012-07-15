@@ -47,20 +47,14 @@ static int pl01x_tstc (int portnum);
 unsigned int baudrate = CONFIG_BAUDRATE;
 DECLARE_GLOBAL_DATA_PTR;
 
-static struct pl01x_regs *pl01x_get_regs(int portnum)
-{
-	return (struct pl01x_regs *) port[portnum];
-}
-
 #ifdef CONFIG_PL010_SERIAL
 
 int serial_init (void)
 {
-	struct pl01x_regs *regs = pl01x_get_regs(CONSOLE_PORT);
 	unsigned int divisor;
 
 	/* First, disable everything */
-	writel(0, &regs->pl010_cr);
+	writel(0x0, port[CONSOLE_PORT] + UART_PL010_CR);
 
 	/* Set baud rate */
 	switch (baudrate) {
@@ -88,14 +82,15 @@ int serial_init (void)
 		divisor = UART_PL010_BAUD_38400;
 	}
 
-	writel((divisor & 0xf00) >> 8, &regs->pl010_lcrm);
-	writel(divisor & 0xff, &regs->pl010_lcrl);
+	writel(((divisor & 0xf00) >> 8), port[CONSOLE_PORT] + UART_PL010_LCRM);
+	writel((divisor & 0xff), port[CONSOLE_PORT] + UART_PL010_LCRL);
 
 	/* Set the UART to be 8 bits, 1 stop bit, no parity, fifo enabled */
-	writel(UART_PL010_LCRH_WLEN_8 | UART_PL010_LCRH_FEN, &regs->pl010_lcrh);
+	writel((UART_PL010_LCRH_WLEN_8 | UART_PL010_LCRH_FEN),
+		port[CONSOLE_PORT] + UART_PL010_LCRH);
 
 	/* Finally, enable the UART */
-	writel(UART_PL010_CR_UARTEN, &regs->pl010_cr);
+	writel((UART_PL010_CR_UARTEN), port[CONSOLE_PORT] + UART_PL010_CR);
 
 	return 0;
 }
@@ -106,23 +101,13 @@ int serial_init (void)
 
 int serial_init (void)
 {
-	struct pl01x_regs *regs = pl01x_get_regs(CONSOLE_PORT);
 	unsigned int temp;
 	unsigned int divider;
 	unsigned int remainder;
 	unsigned int fraction;
-	unsigned int lcr;
-
-#ifdef CONFIG_PL011_SERIAL_FLUSH_ON_INIT
-	/* Empty RX fifo if necessary */
-	if (readl(&regs->pl011_cr) & UART_PL011_CR_UARTEN) {
-		while (!(readl(&regs->fr) & UART_PL01x_FR_RXFE))
-			readl(&regs->dr);
-	}
-#endif
 
 	/* First, disable everything */
-	writel(0, &regs->pl011_cr);
+	writel(0x0, port[CONSOLE_PORT] + UART_PL011_CR);
 
 	/*
 	 * Set baud rate
@@ -136,31 +121,16 @@ int serial_init (void)
 	temp = (8 * remainder) / baudrate;
 	fraction = (temp >> 1) + (temp & 1);
 
-	writel(divider, &regs->pl011_ibrd);
-	writel(fraction, &regs->pl011_fbrd);
+	writel(divider, port[CONSOLE_PORT] + UART_PL011_IBRD);
+	writel(fraction, port[CONSOLE_PORT] + UART_PL011_FBRD);
 
 	/* Set the UART to be 8 bits, 1 stop bit, no parity, fifo enabled */
-	lcr = UART_PL011_LCRH_WLEN_8 | UART_PL011_LCRH_FEN;
-	writel(lcr, &regs->pl011_lcrh);
+	writel((UART_PL011_LCRH_WLEN_8 | UART_PL011_LCRH_FEN),
+		port[CONSOLE_PORT] + UART_PL011_LCRH);
 
-#ifdef CONFIG_PL011_SERIAL_RLCR
-	{
-		int i;
-
-		/*
-		 * Program receive line control register after waiting
-		 * 10 bus cycles.  Delay be writing to readonly register
-		 * 10 times
-		 */
-		for (i = 0; i < 10; i++)
-			writel(lcr, &regs->fr);
-
-		writel(lcr, &regs->pl011_rlcr);
-	}
-#endif
 	/* Finally, enable the UART */
-	writel(UART_PL011_CR_UARTEN | UART_PL011_CR_TXE | UART_PL011_CR_RXE,
-	       &regs->pl011_cr);
+	writel((UART_PL011_CR_UARTEN | UART_PL011_CR_TXE | UART_PL011_CR_RXE),
+		port[CONSOLE_PORT] + UART_PL011_CR);
 
 	return 0;
 }
@@ -194,47 +164,34 @@ int serial_tstc (void)
 
 void serial_setbrg (void)
 {
-	struct pl01x_regs *regs = pl01x_get_regs(CONSOLE_PORT);
-
 	baudrate = gd->baudrate;
-	/*
-	 * Flush FIFO and wait for non-busy before changing baudrate to avoid
-	 * crap in console
-	 */
-	while (!(readl(&regs->fr) & UART_PL01x_FR_TXFE))
-		WATCHDOG_RESET();
-	while (readl(&regs->fr) & UART_PL01x_FR_BUSY)
-		WATCHDOG_RESET();
 	serial_init();
 }
 
 static void pl01x_putc (int portnum, char c)
 {
-	struct pl01x_regs *regs = pl01x_get_regs(portnum);
-
 	/* Wait until there is space in the FIFO */
-	while (readl(&regs->fr) & UART_PL01x_FR_TXFF)
+	while (readl(port[portnum] + UART_PL01x_FR) & UART_PL01x_FR_TXFF)
 		WATCHDOG_RESET();
 
 	/* Send the character */
-	writel(c, &regs->dr);
+	writel(c, port[portnum] + UART_PL01x_DR);
 }
 
 static int pl01x_getc (int portnum)
 {
-	struct pl01x_regs *regs = pl01x_get_regs(portnum);
 	unsigned int data;
 
 	/* Wait until there is data in the FIFO */
-	while (readl(&regs->fr) & UART_PL01x_FR_RXFE)
+	while (readl(port[portnum] + UART_PL01x_FR) & UART_PL01x_FR_RXFE)
 		WATCHDOG_RESET();
 
-	data = readl(&regs->dr);
+	data = readl(port[portnum] + UART_PL01x_DR);
 
 	/* Check for an error flag */
 	if (data & 0xFFFFFF00) {
 		/* Clear the error */
-		writel(0xFFFFFFFF, &regs->ecr);
+		writel(0xFFFFFFFF, port[portnum] + UART_PL01x_ECR);
 		return -1;
 	}
 
@@ -243,8 +200,7 @@ static int pl01x_getc (int portnum)
 
 static int pl01x_tstc (int portnum)
 {
-	struct pl01x_regs *regs = pl01x_get_regs(portnum);
-
 	WATCHDOG_RESET();
-	return !(readl(&regs->fr) & UART_PL01x_FR_RXFE);
+	return !(readl(port[portnum] + UART_PL01x_FR) &
+		 UART_PL01x_FR_RXFE);
 }

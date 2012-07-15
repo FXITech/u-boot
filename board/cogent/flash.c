@@ -23,7 +23,6 @@
 
 #include <common.h>
 #include <board/cogent/flash.h>
-#include <linux/compiler.h>
 
 flash_info_t	flash_info[CONFIG_SYS_MAX_FLASH_BANKS]; /* info for FLASH chips	*/
 
@@ -293,7 +292,7 @@ flash_init(void)
 {
 	unsigned long total;
 	int i;
-	__maybe_unused flash_info_t *fip;
+	flash_info_t *fip;
 
 	/* Init: no FLASHes known */
 	for (i=0; i<CONFIG_SYS_MAX_FLASH_BANKS; ++i) {

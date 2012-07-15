@@ -43,13 +43,7 @@
 #endif
 
 #ifdef CONFIG_CRAMFS_CMDLINE
-#include <flash.h>
-
-#ifdef CONFIG_SYS_NO_FLASH
-# define OFFSET_ADJUSTMENT	0
-#else
-# define OFFSET_ADJUSTMENT	(flash_info[id.num].start[0])
-#endif
+flash_info_t flash_info[1];
 
 #ifndef CONFIG_CMD_JFFS2
 #include <linux/stat.h>
@@ -125,7 +119,7 @@ int do_cramfs_load(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	dev.id = &id;
 	part.dev = &dev;
 	/* fake the address offset */
-	part.offset = addr - OFFSET_ADJUSTMENT;
+	part.offset = addr - flash_info[id.num].start[0];
 
 	/* pre-set Boot file name */
 	if ((filename = getenv("bootfile")) == NULL) {
@@ -188,7 +182,7 @@ int do_cramfs_ls(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	dev.id = &id;
 	part.dev = &dev;
 	/* fake the address offset */
-	part.offset = addr - OFFSET_ADJUSTMENT;
+	part.offset = addr - flash_info[id.num].start[0];
 
 	if (argc == 2)
 		filename = argv[1];

@@ -49,7 +49,6 @@ u32 get_omap3_evm_rev(void);
 
 #if defined(CONFIG_CMD_NET)
 static void setup_net_chip(void);
-static void reset_net_chip(void);
 #endif
 
 /*

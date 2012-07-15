@@ -23,7 +23,8 @@
 
 include $(TOPDIR)/config.mk
 ifneq ($(OBJTREE),$(SRCTREE))
-$(shell mkdir -p $(obj)drivers/epic $(obj)drivers/i2c)
+$(shell mkdir -p $(obj)drivers/epic)
+$(shell mkdir -p $(obj)drivers/i2c)
 endif
 
 LIB	= $(obj)lib$(CPU).o

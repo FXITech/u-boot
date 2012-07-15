@@ -200,13 +200,12 @@ int board_early_init_f (void)
 
 int checkboard (void)
 {
-	char buf[64];
-	int i = getenv_f("serial#", buf, sizeof(buf));
+	char *s = getenv ("serial#");
 
 	printf ("Board: Ocotea - AMCC PPC440GX Evaluation Board");
-	if (i > 0) {
-		puts(", serial# ");
-		puts(buf);
+	if (s != NULL) {
+		puts (", serial# ");
+		puts (s);
 	}
 	putc ('\n');
 

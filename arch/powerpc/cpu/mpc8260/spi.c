@@ -276,9 +276,11 @@ void spi_init_r (void)
 {
 	volatile spi_t *spi;
 	volatile immap_t *immr;
+	volatile cpm8260_t *cp;
 	volatile cbd_t *tbdf, *rbdf;
 
 	immr = (immap_t *)  CONFIG_SYS_IMMR;
+	cp   = (cpm8260_t *) &immr->im_cpm;
 
 	spi  = (spi_t *)&immr->im_dprambase[PROFF_SPI];
 
@@ -356,6 +358,7 @@ ssize_t spi_read (uchar *addr, int alen, uchar *buffer, int len)
 ssize_t spi_xfer (size_t count)
 {
 	volatile immap_t *immr;
+	volatile cpm8260_t *cp;
 	volatile spi_t *spi;
 	cbd_t *tbdf, *rbdf;
 	int tm;
@@ -363,6 +366,7 @@ ssize_t spi_xfer (size_t count)
 	DPRINT (("*** spi_xfer entered ***\n"));
 
 	immr = (immap_t *) CONFIG_SYS_IMMR;
+	cp   = (cpm8260_t *) &immr->im_cpm;
 
 	spi  = (spi_t *)&immr->im_dprambase[PROFF_SPI];
 

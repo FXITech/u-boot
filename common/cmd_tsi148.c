@@ -53,7 +53,7 @@ static TSI148_DEV *dev;
 
 int tsi148_init(void)
 {
-	int j, result;
+	int j, result, lastError = 0;
 	pci_dev_t busdevfn;
 	unsigned int val;
 
@@ -69,7 +69,8 @@ int tsi148_init(void)
 	dev = malloc(sizeof(*dev));
 	if (NULL == dev) {
 		puts("Tsi148: No memory!\n");
-		return -1;
+		result = -1;
+		goto break_20;
 	}
 
 	memset(dev, 0, sizeof(*dev));
@@ -138,6 +139,8 @@ int tsi148_init(void)
  break_30:
 	free(dev);
 	dev = NULL;
+ break_20:
+	lastError = result;
 
 	return result;
 }

@@ -30,7 +30,6 @@ COBJS-y	= cpu.o
 COBJS-y	+= dram.o
 COBJS-y	+= mpp.o
 COBJS-y	+= timer.o
-COBJS-y	+= cache.o
 
 SRCS	:= $(SOBJS:.o=.S) $(COBJS-y:.o=.c)
 OBJS	:= $(addprefix $(obj),$(SOBJS) $(COBJS-y))

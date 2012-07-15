@@ -279,7 +279,7 @@ int flash_erase(flash_info_t * info, int s_first, int s_last)
 {
 	volatile CONFIG_SYS_FLASH_WORD_SIZE *addr = (CONFIG_SYS_FLASH_WORD_SIZE *) (info->start[0]);
 	volatile CONFIG_SYS_FLASH_WORD_SIZE *addr2;
-	int flag, prot, sect;
+	int flag, prot, sect, l_sect;
 
 	if ((s_first < 0) || (s_first > s_last)) {
 		if (info->flash_id == FLASH_UNKNOWN)
@@ -305,6 +305,8 @@ int flash_erase(flash_info_t * info, int s_first, int s_last)
 
 	printf("\n");
 
+	l_sect = -1;
+
 	/* Disable interrupts which might cause a timeout here */
 	flag = disable_interrupts();
 
@@ -320,6 +322,7 @@ int flash_erase(flash_info_t * info, int s_first, int s_last)
 			addr[CONFIG_SYS_FLASH_ADDR1] = (CONFIG_SYS_FLASH_WORD_SIZE) 0x00550055;
 			addr2[0] = (CONFIG_SYS_FLASH_WORD_SIZE) 0x00300030;	/* sector erase */
 
+			l_sect = sect;
 			/*
 			 * Wait for each sector to complete, it's more
 			 * reliable.  According to AMD Spec, you must
@@ -606,7 +609,7 @@ static int flash_erase_16(flash_info_t * info, int s_first, int s_last)
 {
 	volatile CONFIG_SYS_FLASH_WORD_SIZE *addr = (CONFIG_SYS_FLASH_WORD_SIZE *) (info->start[0]);
 	volatile CONFIG_SYS_FLASH_WORD_SIZE *addr2;
-	int flag, prot, sect;
+	int flag, prot, sect, l_sect;
 
 	if ((s_first < 0) || (s_first > s_last)) {
 		if (info->flash_id == FLASH_UNKNOWN)
@@ -632,6 +635,8 @@ static int flash_erase_16(flash_info_t * info, int s_first, int s_last)
 
 	printf("\n");
 
+	l_sect = -1;
+
 	/* Disable interrupts which might cause a timeout here */
 	flag = disable_interrupts();
 
@@ -647,6 +652,7 @@ static int flash_erase_16(flash_info_t * info, int s_first, int s_last)
 			addr[CONFIG_SYS_FLASH_ADDR1] = (CONFIG_SYS_FLASH_WORD_SIZE) 0x55005500;
 			addr2[0] = (CONFIG_SYS_FLASH_WORD_SIZE) 0x30003000;	/* sector erase */
 
+			l_sect = sect;
 			/*
 			 * Wait for each sector to complete, it's more
 			 * reliable.  According to AMD Spec, you must

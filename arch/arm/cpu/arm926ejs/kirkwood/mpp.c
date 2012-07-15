@@ -10,8 +10,6 @@
  */
 
 #include <common.h>
-#include <asm/io.h>
-#include <asm/arch/cpu.h>
 #include <asm/arch/kirkwood.h>
 #include <asm/arch/mpp.h>
 
@@ -31,7 +29,7 @@ static u32 kirkwood_variant(void)
 #define MPP_CTRL(i)	(KW_MPP_BASE + (i* 4))
 #define MPP_NR_REGS	(1 + MPP_MAX/8)
 
-void kirkwood_mpp_conf(u32 *mpp_list, u32 *mpp_save)
+void kirkwood_mpp_conf(u32 *mpp_list)
 {
 	u32 mpp_ctrl[MPP_NR_REGS];
 	unsigned int variant_mask;
@@ -52,7 +50,6 @@ void kirkwood_mpp_conf(u32 *mpp_list, u32 *mpp_save)
 	while (*mpp_list) {
 		unsigned int num = MPP_NUM(*mpp_list);
 		unsigned int sel = MPP_SEL(*mpp_list);
-		unsigned int sel_save;
 		int shift;
 
 		if (num > MPP_MAX) {
@@ -67,13 +64,6 @@ void kirkwood_mpp_conf(u32 *mpp_list, u32 *mpp_save)
 		}
 
 		shift = (num & 7) << 2;
-
-		if (mpp_save) {
-			sel_save = (mpp_ctrl[num / 8] >> shift) & 0xf;
-			*mpp_save = num | (sel_save << 8) | variant_mask;
-			mpp_save++;
-		}
-
 		mpp_ctrl[num / 8] &= ~(0xf << shift);
 		mpp_ctrl[num / 8] |= sel << shift;
 

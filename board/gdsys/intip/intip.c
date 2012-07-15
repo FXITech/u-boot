@@ -124,8 +124,7 @@ int get_cpu_num(void)
 
 int checkboard(void)
 {
-	char buf[64];
-	int i = getenv_f("serial#", buf, sizeof(buf));
+	char *s = getenv("serial#");
 
 #ifdef CONFIG_DEVCONCENTER
 	printf("Board: DevCon-Center");
@@ -133,9 +132,9 @@ int checkboard(void)
 	printf("Board: Intip");
 #endif
 
-	if (i > 0) {
+	if (s != NULL) {
 		puts(", serial# ");
-		puts(buf);
+		puts(s);
 	}
 	putc('\n');
 

@@ -1,7 +1,11 @@
 /*
- * Marvell PXA2xx/3xx timer driver
+ * (C) Copyright 2002
+ * Sysgo Real-Time Solutions, GmbH <www.elinos.com>
+ * Marius Groeger <mgroeger@sysgo.de>
  *
- * Copyright (C) 2011 Marek Vasut <marek.vasut@gmail.com>
+ * (C) Copyright 2002
+ * Sysgo Real-Time Solutions, GmbH <www.elinos.com>
+ * Alex Zuepke <azu@sysgo.de>
  *
  * See file CREDITS for list of people who contributed to this
  * project.
@@ -27,63 +31,71 @@
 #include <common.h>
 #include <div64.h>
 
-DECLARE_GLOBAL_DATA_PTR;
+#ifdef CONFIG_USE_IRQ
+#error: interrupts not implemented yet
+#endif
 
-#define	TIMER_LOAD_VAL	0xffffffff
-
-#define	timestamp	(gd->tbl)
-#define	lastinc		(gd->lastinc)
-
-#if defined(CONFIG_CPU_PXA27X) || defined(CONFIG_CPU_MONAHANS)
-#define	TIMER_FREQ_HZ	3250000
-#elif defined(CONFIG_CPU_PXA25X)
-#define	TIMER_FREQ_HZ	3686400
+#if defined(CONFIG_PXA27X) || defined(CONFIG_CPU_MONAHANS)
+#define TIMER_FREQ_HZ 3250000
+#elif defined(CONFIG_PXA250)
+#define TIMER_FREQ_HZ 3686400
 #else
 #error "Timer frequency unknown - please config PXA CPU type"
 #endif
 
-static unsigned long long tick_to_time(unsigned long long tick)
+static inline unsigned long long tick_to_time(unsigned long long tick)
 {
-	return tick * CONFIG_SYS_HZ / TIMER_FREQ_HZ;
+	tick *= CONFIG_SYS_HZ;
+	do_div(tick, TIMER_FREQ_HZ);
+	return tick;
 }
 
-static unsigned long long us_to_tick(unsigned long long us)
+static inline unsigned long long us_to_tick(unsigned long long us)
 {
-	return (us * TIMER_FREQ_HZ) / 1000000;
+	us = us * TIMER_FREQ_HZ + 999999;
+	do_div(us, 1000000);
+	return us;
 }
 
-int timer_init(void)
+int timer_init (void)
 {
-	writel(0, OSCR);
+	reset_timer();
+
 	return 0;
 }
 
-unsigned long long get_ticks(void)
+void reset_timer (void)
 {
-	/* Current tick value */
-	uint32_t now = readl(OSCR);
-
-	if (now >= lastinc) {
-		/*
-		 * Normal mode (non roll)
-		 * Move stamp forward with absolute diff ticks
-		 */
-		timestamp += (now - lastinc);
-	} else {
-		/* We have rollover of incrementer */
-		timestamp += (TIMER_LOAD_VAL - lastinc) + now;
-	}
-
-	lastinc = now;
-	return timestamp;
+	reset_timer_masked ();
 }
 
-ulong get_timer(ulong base)
+ulong get_timer (ulong base)
 {
-	return tick_to_time(get_ticks()) - base;
+	return get_timer_masked () - base;
 }
 
-void __udelay(unsigned long usec)
+void set_timer (ulong t)
+{
+	/* nop */
+}
+
+void __udelay (unsigned long usec)
+{
+	udelay_masked (usec);
+}
+
+
+void reset_timer_masked (void)
+{
+	writel(0, OSCR);
+}
+
+ulong get_timer_masked (void)
+{
+	return tick_to_time(get_ticks());
+}
+
+void udelay_masked (unsigned long usec)
 {
 	unsigned long long tmp;
 	ulong tmo;
@@ -93,9 +105,25 @@ void __udelay(unsigned long usec)
 
 	while (get_ticks() < tmp)	/* loop till event */
 		 /*NOP*/;
+
 }
 
-ulong get_tbclk(void)
+/*
+ * This function is derived from PowerPC code (read timebase as long long).
+ * On ARM it just returns the timer value.
+ */
+unsigned long long get_ticks(void)
 {
-	return TIMER_FREQ_HZ;
+	return readl(OSCR);
+}
+
+/*
+ * This function is derived from PowerPC code (timebase clock frequency).
+ * On ARM it returns the number of timer ticks per second.
+ */
+ulong get_tbclk (void)
+{
+	ulong tbclk;
+	tbclk = TIMER_FREQ_HZ;
+	return tbclk;
 }

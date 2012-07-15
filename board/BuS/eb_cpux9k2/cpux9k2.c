@@ -33,7 +33,6 @@
 #include <asm/arch/at91_pio.h>
 #include <asm/arch/at91_pmc.h>
 #include <asm/arch/at91_mc.h>
-#include <asm/arch/at91_common.h>
 
 #ifdef CONFIG_STATUS_LED
 #include <status_led.h>
@@ -58,12 +57,12 @@ DECLARE_GLOBAL_DATA_PTR;
 
 int board_init(void)
 {
-	at91_pio_t *pio	= (at91_pio_t *) ATMEL_BASE_PIO;
+	at91_pio_t *pio	= (at91_pio_t *) AT91_PIO_BASE;
 	/* Enable Ctrlc */
 	console_init_f();
 
 	/* Correct IRDA resistor problem / Set PA23_TXD in Output */
-	writel(ATMEL_PMX_AA_TXD2, &pio->pioa.oer);
+	writel(AT91_PMX_AA_TXD2, &pio->pioa.oer);
 
 	gd->bd->bi_arch_number = MACH_TYPE_EB_CPUX9K2;
 	/* adress of boot parameters */
@@ -78,12 +77,6 @@ int board_init(void)
 	return 0;
 }
 
-int board_early_init_f(void)
-{
-	at91_seriald_hw_init();
-	return 0;
-}
-
 #ifdef CONFIG_MISC_INIT_R
 
 int misc_init_r(void)
@@ -93,6 +86,7 @@ int misc_init_r(void)
 	uchar	midx;
 	uchar	macn6, macn7;
 
+#ifdef CONFIG_NET_MULTI
 	if (getenv("ethaddr") == NULL) {
 		if (i2c_read(CONFIG_SYS_I2C_EEPROM_ADDR, 0x00,
 				CONFIG_SYS_I2C_EEPROM_ADDR_LEN,
@@ -116,6 +110,7 @@ int misc_init_r(void)
 				puts("Error: invalid MAC at EEPROM\n");
 		}
 	}
+#endif
 	gd->jt[XF_do_reset] = (void *) do_reset;
 
 #ifdef CONFIG_STATUS_LED
@@ -139,7 +134,7 @@ void reset_phy(void)
 
 int dram_init(void)
 {
-	gd->ram_size = get_ram_size((long *)CONFIG_SYS_SDRAM_BASE,
+	gd->ram_size = get_ram_size((volatile long *)CONFIG_SYS_SDRAM_BASE,
 			CONFIG_SYS_SDRAM_SIZE);
 	return 0;
 }
@@ -152,7 +147,7 @@ int dram_init(void)
 int board_eth_init(bd_t *bis)
 {
 	int rc = 0;
-	rc = at91emac_register(bis, (u32) ATMEL_BASE_EMAC);
+	rc = at91emac_register(bis, (u32) AT91_EMAC_BASE);
 	return rc;
 }
 #endif
@@ -169,9 +164,9 @@ int board_eth_init(bd_t *bis)
 void cpux9k2_nand_hw_init(void)
 {
 	unsigned long csr;
-	at91_pio_t *pio = (at91_pio_t *) ATMEL_BASE_PIO;
-	at91_pmc_t *pmc = (at91_pmc_t *) ATMEL_BASE_PMC;
-	at91_mc_t *mc = (at91_mc_t *) ATMEL_BASE_MC;
+	at91_pio_t *pio = (at91_pio_t *) AT91_PIO_BASE;
+	at91_pmc_t *pmc = (at91_pmc_t *) AT91_PMC_BASE;
+	at91_mc_t *mc = (at91_mc_t *) AT91_MC_BASE;
 
 	/* Setup Smart Media, fitst enable the address range of CS3 */
 	writel(readl(&mc->ebi.csa) | AT91_EBI_CSA_CS3A, &mc->ebi.csa);
@@ -183,23 +178,23 @@ void cpux9k2_nand_hw_init(void)
 		AT91_SMC_CSR_WSEN;
 	writel(csr, &mc->smc.csr[3]);
 
-	writel(ATMEL_PMX_CA_SMOE | ATMEL_PMX_CA_SMWE, &pio->pioc.asr);
-	writel(ATMEL_PMX_CA_BFCK | ATMEL_PMX_CA_SMOE | ATMEL_PMX_CA_SMWE,
+	writel(AT91_PMX_CA_SMOE | AT91_PMX_CA_SMWE, &pio->pioc.asr);
+	writel(AT91_PMX_CA_BFCK | AT91_PMX_CA_SMOE | AT91_PMX_CA_SMWE,
 		&pio->pioc.pdr);
 
 	/* Configure PC2 as input (signal Nand READY ) */
-	writel(ATMEL_PMX_CA_BFAVD, &pio->pioc.per);
-	writel(ATMEL_PMX_CA_BFAVD, &pio->pioc.odr); /* disable output */
-	writel(ATMEL_PMX_CA_BFCK, &pio->pioc.codr);
+	writel(AT91_PMX_CA_BFAVD, &pio->pioc.per);
+	writel(AT91_PMX_CA_BFAVD, &pio->pioc.odr); /* disable output */
+	writel(AT91_PMX_CA_BFCK, &pio->pioc.codr);
 
 	/* PIOC clock enabling */
-	writel(1 << ATMEL_ID_PIOC, &pmc->pcer);
+	writel(1 << AT91_ID_PIOC, &pmc->pcer);
 }
 
 static void board_nand_hwcontrol(struct mtd_info *mtd,
 	int cmd, unsigned int ctrl)
 {
-	at91_pio_t *pio = (at91_pio_t *) ATMEL_BASE_PIO;
+	at91_pio_t *pio = (at91_pio_t *) AT91_PIO_BASE;
 	struct nand_chip *this = mtd->priv;
 	ulong IO_ADDR_W = (ulong) this->IO_ADDR_W;
 
@@ -224,7 +219,7 @@ static void board_nand_hwcontrol(struct mtd_info *mtd,
 
 static int board_nand_dev_ready(struct mtd_info *mtd)
 {
-	at91_pio_t *pio = (at91_pio_t *) ATMEL_BASE_PIO;
+	at91_pio_t *pio = (at91_pio_t *) AT91_PIO_BASE;
 	return ((readl(&pio->pioc.pdsr) & (1 << 2)) != 0);
 }
 
@@ -253,8 +248,8 @@ int drv_video_init(void)
 #endif
 	char *s;
 	unsigned long csr;
-	at91_pmc_t *pmc = (at91_pmc_t *) ATMEL_BASE_PMC;
-	at91_mc_t *mc = (at91_mc_t *) ATMEL_BASE_MC;
+	at91_pmc_t *pmc = (at91_pmc_t *) AT91_PMC_BASE;
+	at91_mc_t *mc = (at91_mc_t *) AT91_MC_BASE;
 
 	printf("Init Video as ");
 	s = getenv("displaywidth");
@@ -275,7 +270,7 @@ int drv_video_init(void)
 		AT91_SMC_CSR_ACSS_STANDARD | AT91_SMC_CSR_DBW_16 |
 		AT91_SMC_CSR_BAT_16 | AT91_SMC_CSR_WSEN;
 	writel(csr, &mc->smc.csr[2]);
-	writel(1 << ATMEL_ID_PIOB, &pmc->pcer);
+	writel(1 << AT91_ID_PIOB, &pmc->pcer);
 
 	vcxk_init(display_width, display_height);
 #ifdef CONFIG_SPLASH_SCREEN
@@ -295,11 +290,11 @@ int drv_video_init(void)
 void i2c_init_board(void)
 {
 	u32 pin;
-	at91_pmc_t *pmc = (at91_pmc_t *) ATMEL_BASE_PMC;
-	at91_pio_t *pio = (at91_pio_t *) ATMEL_BASE_PIO;
+	at91_pmc_t *pmc = (at91_pmc_t *) AT91_PMC_BASE;
+	at91_pio_t *pio = (at91_pio_t *) AT91_PIO_BASE;
 
-	writel(1 << ATMEL_ID_PIOA, &pmc->pcer);
-	pin = ATMEL_PMX_AA_TWD | ATMEL_PMX_AA_TWCK;
+	writel(1 << AT91_ID_PIOA, &pmc->pcer);
+	pin = AT91_PMX_AA_TWD | AT91_PMX_AA_TWCK;
 	writel(pin, &pio->pioa.idr);
 	writel(pin, &pio->pioa.pudr);
 	writel(pin, &pio->pioa.per);
@@ -315,7 +310,7 @@ void i2c_init_board(void)
 
 void __led_toggle(led_id_t mask)
 {
-	at91_pio_t *pio = (at91_pio_t *) ATMEL_BASE_PIO;
+	at91_pio_t *pio = (at91_pio_t *) AT91_PIO_BASE;
 
 	if (readl(&pio->piod.odsr) & mask)
 		writel(mask, &pio->piod.codr);
@@ -325,10 +320,10 @@ void __led_toggle(led_id_t mask)
 
 void __led_init(led_id_t mask, int state)
 {
-	at91_pmc_t *pmc = (at91_pmc_t *) ATMEL_BASE_PMC;
-	at91_pio_t *pio = (at91_pio_t *) ATMEL_BASE_PIO;
+	at91_pmc_t *pmc = (at91_pmc_t *) AT91_PMC_BASE;
+	at91_pio_t *pio = (at91_pio_t *) AT91_PIO_BASE;
 
-	writel(1 << ATMEL_ID_PIOD, &pmc->pcer);	/* Enable PIOB clock */
+	writel(1 << AT91_ID_PIOD, &pmc->pcer);	/* Enable PIOB clock */
 	/* Disable peripherals on LEDs */
 	writel(STATUS_LED_BIT | STATUS_LED_BIT1, &pio->piod.per);
 	/* Enable pins as outputs */
@@ -341,7 +336,7 @@ void __led_init(led_id_t mask, int state)
 
 void __led_set(led_id_t mask, int state)
 {
-	at91_pio_t *pio = (at91_pio_t *) ATMEL_BASE_PIO;
+	at91_pio_t *pio = (at91_pio_t *) AT91_PIO_BASE;
 	if (state == STATUS_LED_ON)
 		writel(mask, &pio->piod.codr);
 	else

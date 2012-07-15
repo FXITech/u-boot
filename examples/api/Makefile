@@ -62,6 +62,8 @@ OBJS	+= $(addprefix $(obj),$(COBJ_FILES-y))
 OBJS	+= $(addprefix $(obj),$(notdir $(EXT_COBJ_FILES-y)))
 OBJS	+= $(addprefix $(obj),$(notdir $(EXT_SOBJ_FILES-y)))
 
+gcclibdir := $(shell dirname `$(CC) -print-libgcc-file-name`)
+
 CPPFLAGS += -I..
 
 all:	$(obj).depend $(OUTPUT)
@@ -69,7 +71,7 @@ all:	$(obj).depend $(OUTPUT)
 #########################################################################
 
 $(OUTPUT):	$(OBJS)
-		$(LD) -Ttext $(LOAD_ADDR) -o $@ $^ $(PLATFORM_LIBS)
+		$(LD) -Ttext $(LOAD_ADDR) -o $@ $^ -L$(gcclibdir) -lgcc
 		$(OBJCOPY) -O binary $@ $(OUTPUT).bin 2>/dev/null
 
 # Rule to build generic library C files

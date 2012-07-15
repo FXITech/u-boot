@@ -24,10 +24,12 @@ include $(TOPDIR)/config.mk
 
 LIB	= $(obj)lib$(SOC).o
 
-COBJS	= generic.o timer.o reset.o
+COBJS	= generic.o timer.o
+MX27OBJS = reset.o
 
 SRCS	:= $(SOBJS:.o=.S) $(COBJS:.o=.c)
-OBJS	:= $(addprefix $(obj),$(SOBJS) $(COBJS))
+SRCS	+= $(addprefix $(SRCTREE)/arch/arm/cpu/arm926ejs/mx27/,$(MX27OBJS:.o=.c))
+OBJS	:= $(addprefix $(obj),$(SOBJS) $(COBJS) $(MX27OBJS))
 
 all:	$(obj).depend $(LIB)
 

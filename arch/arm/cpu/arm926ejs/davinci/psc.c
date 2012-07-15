@@ -46,7 +46,7 @@
  */
 
 /* Works on Always On power domain only (no PD argument) */
-static void lpsc_transition(unsigned int id, unsigned int state)
+void lpsc_on(unsigned int id)
 {
 	dv_reg_p mdstat, mdctl, ptstat, ptcmd;
 #ifdef CONFIG_SOC_DA8XX
@@ -83,10 +83,10 @@ static void lpsc_transition(unsigned int id, unsigned int state)
 	while (readl(ptstat) & 0x01)
 		continue;
 
-	if ((readl(mdstat) & PSC_MDSTAT_STATE) == state)
-		return; /* Already in that state */
+	if ((readl(mdstat) & 0x1f) == 0x03)
+		return; /* Already on and enabled */
 
-	writel((readl(mdctl) & ~PSC_MDCTL_NEXT) | state, mdctl);
+	writel(readl(mdctl) | 0x03, mdctl);
 
 	switch (id) {
 #ifdef CONFIG_SOC_DM644X
@@ -114,18 +114,8 @@ static void lpsc_transition(unsigned int id, unsigned int state)
 
 	while (readl(ptstat) & 0x01)
 		continue;
-	while ((readl(mdstat) & PSC_MDSTAT_STATE) != state)
+	while ((readl(mdstat) & 0x1f) != 0x03)
 		continue;
-}
-
-void lpsc_on(unsigned int id)
-{
-	lpsc_transition(id, 0x03);
-}
-
-void lpsc_syncreset(unsigned int id)
-{
-	lpsc_transition(id, 0x01);
 }
 
 /* Not all DaVinci chips have a DSP power domain. */

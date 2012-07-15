@@ -26,7 +26,7 @@
 #include <asm/io.h>
 
 #include <asm/arch/clk.h>
-#include <asm/arch/hardware.h>
+#include <asm/arch/memory-map.h>
 
 #include "atmel_spi.h"
 
@@ -48,21 +48,21 @@ struct spi_slave *spi_setup_slave(unsigned int bus, unsigned int cs,
 
 	switch (bus) {
 	case 0:
-		regs = (void *)ATMEL_BASE_SPI0;
+		regs = (void *)SPI0_BASE;
 		break;
-#ifdef ATMEL_BASE_SPI1
+#ifdef SPI1_BASE
 	case 1:
-		regs = (void *)ATMEL_BASE_SPI1;
+		regs = (void *)SPI1_BASE;
 		break;
 #endif
-#ifdef ATMEL_BASE_SPI2
+#ifdef SPI2_BASE
 	case 2:
-		regs = (void *)ATMEL_BASE_SPI2;
+		regs = (void *)SPI2_BASE;
 		break;
 #endif
-#ifdef ATMEL_BASE_SPI3
+#ifdef SPI3_BASE
 	case 3:
-		regs = (void *)ATMEL_BASE_SPI3;
+		regs = (void *)SPI3_BASE;
 		break;
 #endif
 	default:
@@ -136,11 +136,13 @@ int spi_xfer(struct spi_slave *slave, unsigned int bitlen,
 	unsigned int	len_tx;
 	unsigned int	len_rx;
 	unsigned int	len;
+	int		ret;
 	u32		status;
 	const u8	*txp = dout;
 	u8		*rxp = din;
 	u8		value;
 
+	ret = 0;
 	if (bitlen == 0)
 		/* Finish any previously submitted transfers */
 		goto out;

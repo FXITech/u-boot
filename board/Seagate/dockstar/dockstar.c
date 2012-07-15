@@ -29,8 +29,6 @@
 #include <miiphy.h>
 #include <asm/arch/kirkwood.h>
 #include <asm/arch/mpp.h>
-#include <asm/arch/cpu.h>
-#include <asm/io.h>
 #include "dockstar.h"
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -100,7 +98,7 @@ int board_early_init_f(void)
 		MPP49_GPIO,
 		0
 	};
-	kirkwood_mpp_conf(kwmpp_config, NULL);
+	kirkwood_mpp_conf(kwmpp_config);
 	return 0;
 }
 
@@ -169,10 +167,10 @@ static void set_leds(u32 leds, u32 blinking)
 void show_boot_progress(int val)
 {
 	switch (val) {
-	case BOOTSTAGE_ID_RUN_OS:		/* booting Linux */
+	case 15:		/* booting Linux */
 		set_leds(BOTH_LEDS, NEITHER_LED);
 		break;
-	case BOOTSTAGE_ID_NET_ETH_START:	/* Ethernet initialization */
+	case 64:		/* Ethernet initialization */
 		set_leds(GREEN_LED, GREEN_LED);
 		break;
 	default:

@@ -34,7 +34,6 @@
 #include "../include/mv_gen_reg.h"
 #include <net.h>
 #include <netdev.h>
-#include <linux/compiler.h>
 
 #include "eth.h"
 #include "mpsc.h"
@@ -411,7 +410,7 @@ int checkboard (void)
 void debug_led (int led, int mode)
 {
 	volatile int *addr = 0;
-	__maybe_unused int dummy;
+	int dummy;
 
 	if (mode == 1) {
 		switch (led) {
@@ -934,9 +933,5 @@ void board_prebootm_init ()
 
 int board_eth_init(bd_t *bis)
 {
-	int ret;
-	ret = pci_eth_init(bis);
-	if (!ret)
-		ret = mv6436x_eth_initialize(bis);
-	return ret;
+	return pci_eth_init(bis);
 }
