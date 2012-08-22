@@ -16,7 +16,7 @@ fi
 #<C210 BL1 fusing>
 bl1_position=1
 uboot_position=33
-env_position=1057
+env_position=1377
 echo "C210 BL1 fusing"
 
 sudo dd iflag=dsync oflag=dsync if=/dev/zero of=$1 bs=512 count=32 seek=$env_position
