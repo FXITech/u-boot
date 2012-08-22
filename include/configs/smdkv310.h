@@ -181,15 +181,15 @@
 #define CONFIG_BOOTP_HOSTNAME
 #define CONFIG_BOOTP_BOOTPATH
 
-#define CONFIG_ETHADDR		00:40:5c:26:0a:5b
-#define CONFIG_NETMASK          255.255.255.0
-#define CONFIG_IPADDR		192.168.0.20
-#define CONFIG_SERVERIP		192.168.0.10
-#define CONFIG_GATEWAYIP	192.168.0.1
+/* #define CONFIG_ETHADDR		00:40:5c:26:0a:5b */
+/* #define CONFIG_NETMASK          255.255.255.0 */
+/* #define CONFIG_IPADDR		192.168.0.20 */
+/* #define CONFIG_SERVERIP		192.168.0.10 */
+/* #define CONFIG_GATEWAYIP	192.168.0.1 */
 
 #define CONFIG_BOOTDELAY	1
 /* Default boot commands for Android booting. */
-#define CONFIG_BOOTCOMMAND	"movi read kernel 0 40008000;movi read rootfs 0 41000000 100000;bootm 40008000 41000000"
+#define CONFIG_BOOTCOMMAND	"ext2load mmc 0:2 40008000 /zImage ; bootm 40008000"
 #define CONFIG_BOOTARGS	""
 
 #define CONFIG_BOOTCOMMAND2	\
