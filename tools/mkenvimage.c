@@ -45,6 +45,7 @@
 #include <version.h>
 
 #define CRC_SIZE sizeof(uint32_t)
+#define PLAIN_VERSION "unknown"
 
 static void usage(const char *exec_name)
 {

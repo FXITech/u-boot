@@ -65,6 +65,7 @@ BIN_FILES-$(CONFIG_INCA_IP) += inca-swap-bytes$(SFX)
 BIN_FILES-y += mkimage$(SFX)
 BIN_FILES-$(CONFIG_NETCONSOLE) += ncb$(SFX)
 BIN_FILES-$(CONFIG_SHA1_CHECK_UB_IMG) += ubsha1$(SFX)
+BIN_FILES-y += mkenvimage$(SFX)
 
 # Source files which exist outside the tools directory
 EXT_OBJ_FILES-y += common/env_embedded.o
@@ -88,6 +89,7 @@ NOPED_OBJ_FILES-y += mkimage.o
 OBJ_FILES-$(CONFIG_NETCONSOLE) += ncb.o
 NOPED_OBJ_FILES-y += os_support.o
 OBJ_FILES-$(CONFIG_SHA1_CHECK_UB_IMG) += ubsha1.o
+NOPED_OBJ_FILES-y += mkenvimage.o
 
 # Don't build by default
 #ifeq ($(ARCH),ppc)
@@ -161,6 +163,9 @@ $(obj)bmp_logo$(SFX):	$(obj)bmp_logo.o
 	$(HOSTSTRIP) $@
 
 $(obj)envcrc$(SFX):	$(obj)crc32.o $(obj)env_embedded.o $(obj)envcrc.o $(obj)sha1.o
+	$(HOSTCC) $(HOSTCFLAGS) $(HOSTLDFLAGS) -o $@ $^
+
+$(obj)mkenvimage$(SFX): $(obj)crc32.o $(obj)mkenvimage.o
 	$(HOSTCC) $(HOSTCFLAGS) $(HOSTLDFLAGS) -o $@ $^
 
 $(obj)gen_eth_addr$(SFX):	$(obj)gen_eth_addr.o
