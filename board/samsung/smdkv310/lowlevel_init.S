@@ -610,7 +610,7 @@ onenand_boot:
 	b	after_copy
 
 mmcsd_boot:
-#if defined(CONFIG_CLK_1000_400_200) || defined(CONFIG_CLK_1000_200_200) || defined(CONFIG_CLK_800_400_200)
+#if defined(CONFIG_CLK_1000_400_200) || defined(CONFIG_CLK_1000_200_200) || defined(CONFIG_CLK_800_400_200) || defined(CONFIG_CLK_200_400_200)
 	ldr	r0, =ELFIN_CLOCK_BASE
 	ldr	r2, =CLK_DIV_FSYS2_OFFSET
 	ldr	r1, [r0, r2]
@@ -621,7 +621,7 @@ mmcsd_boot:
 	b       after_copy
 
 emmc_boot:
-#if defined(CONFIG_CLK_1000_400_200) || defined(CONFIG_CLK_1000_200_200) || defined(CONFIG_CLK_800_400_200)
+#if defined(CONFIG_CLK_1000_400_200) || defined(CONFIG_CLK_1000_200_200) || defined(CONFIG_CLK_800_400_200) || defined(CONFIG_CLK_200_400_200)
 	ldr	r0, =ELFIN_CLOCK_BASE
 	ldr	r2, =CLK_DIV_FSYS1_OFFSET
 	ldr	r1, [r0, r2]
@@ -748,7 +748,7 @@ tzpc_init:
 
 mmc_ch4_devider_change:
 
-#if defined(CONFIG_CLK_1000_400_200) || defined(CONFIG_CLK_1000_200_200) || defined(CONFIG_CLK_800_400_200)
+#if defined(CONFIG_CLK_1000_400_200) || defined(CONFIG_CLK_1000_200_200) || defined(CONFIG_CLK_800_400_200) || defined(CONFIG_CLK_200_400_200)
 	ldr	r0, =ELFIN_CLOCK_BASE
 	ldr	r2, =CLK_DIV_FSYS3_OFFSET
 	ldr	r1, [r0, r2]

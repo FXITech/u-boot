@@ -29,7 +29,7 @@
 #ifdef CONFIG_CLK_800_400_200
 #define DRAM_CLK_400
 #endif
-#ifdef CONFIG_CLK_1000_400_200
+#if defined(CONFIG_CLK_1000_400_200) || defined(CONFIG_CLK_200_400_200)
 #define DRAM_CLK_400
 #endif
 

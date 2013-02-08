@@ -67,7 +67,9 @@
 /* APLL : 1GHz, DMC bus clock: 330Mhz */
 //#define CONFIG_CLK_1000_330_165
 /* APLL : 1GHz, DMC bus clock: 400Mhz */
-#define CONFIG_CLK_1000_400_200
+//#define CONFIG_CLK_1000_400_200
+/* APLL : 200 Mhz */
+#define CONFIG_CLK_200_400_200
 
 /* Notice for MSHC[Using of MMC CH4] */
 /*
@@ -103,6 +105,10 @@
 #define CONFIG_PM_VDD_ARM	1.2
 #define CONFIG_PM_VDD_INT	1.16
 #define CONFIG_PM_VDD_G3D	1.11
+#elif defined(CONFIG_CLK_200_400_200)
+#define CONFIG_PM_VDD_ARM       0.95
+#define CONFIG_PM_VDD_INT       1.1
+#define CONFIG_PM_VDD_G3D       1.11
 #else   /* default or CONFIG_CLK_1000_400_200 */
 #define CONFIG_PM_VDD_ARM	1.3
 #define CONFIG_PM_VDD_INT	1.15

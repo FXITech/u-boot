@@ -50,6 +50,13 @@
 #define MPLL_MDIV	0xC8
 #define MPLL_PDIV	0x6
 #define MPLL_SDIV	0x1
+#elif defined(CONFIG_CLK_200_400_200)
+#define APLL_MDIV	0xC8
+#define APLL_PDIV	0x6
+#define APLL_SDIV	0x3
+#define MPLL_MDIV	0xC8
+#define MPLL_PDIV	0x6
+#define MPLL_SDIV	0x1
 #endif
 
 /* APLL_CON1	*/
@@ -61,7 +68,7 @@
 #define MPLL_AFC_ENB	0x0
 #if defined(CONFIG_CLK_800_330_165) || defined(CONFIG_CLK_1000_330_165)
 #define MPLL_AFC		0xD
-#elif defined(CONFIG_CLK_1000_400_200) || defined(CONFIG_CLK_1000_200_200) || defined(CONFIG_CLK_800_400_200)
+#elif defined(CONFIG_CLK_1000_400_200) || defined(CONFIG_CLK_1000_200_200) || defined(CONFIG_CLK_800_400_200) || defined(CONFIG_CLK_200_400_200)
 #define MPLL_AFC		0x1C
 #endif
 #define MPLL_CON1_VAL ((MPLL_AFC_ENB << 31) | (MPLL_AFC))
@@ -122,13 +129,24 @@
                                 | (MUX_APLL_SEL_MOUTMPLLFOUT <<0))
 
 /* CLK_DIV_CPU0	*/
-#define APLL_RATIO	0x1
+#ifdef CONFIG_CLK_200_400_200
+#define APLL_RATIO	0x0
 #define PCLK_DBG_RATIO	0x1
 #define ATB_RATIO	0x3
-#define PERIPH_RATIO	0x3
-#define COREM1_RATIO	0x7
-#define COREM0_RATIO	0x3
+#define PERIPH_RATIO	0x1
+#define COREM1_RATIO	0x3
+#define COREM0_RATIO	0x1
 #define CORE_RATIO	0x0
+#else
+#define APLL_RATIO      0x1
+#define PCLK_DBG_RATIO  0x1
+#define ATB_RATIO       0x3
+#define PERIPH_RATIO    0x3
+#define COREM1_RATIO    0x7
+#define COREM0_RATIO    0x3
+#define CORE_RATIO      0x0
+#endif
+
 #define CLK_DIV_CPU0_VAL        ((APLL_RATIO << 24)     \
                                 | (PCLK_DBG_RATIO << 20)\
                                 | (ATB_RATIO << 16)     \
@@ -279,7 +297,7 @@
 #define UART2_RATIO	7
 #define UART1_RATIO	7
 #define UART0_RATIO	7
-#elif defined(CONFIG_CLK_1000_400_200) || defined(CONFIG_CLK_1000_200_200) || defined(CONFIG_CLK_800_400_200)
+#elif defined(CONFIG_CLK_1000_400_200) || defined(CONFIG_CLK_1000_200_200) || defined(CONFIG_CLK_800_400_200) || defined(CONFIG_CLK_200_400_200)
 #define UART5_RATIO	8
 #define UART4_RATIO	8
 #define UART3_RATIO	8
@@ -302,7 +320,7 @@
 #if defined(CONFIG_CLK_800_330_165) || defined(CONFIG_CLK_1000_330_165)
 #define UART_UBRDIV_VAL	0x2B/* (SCLK_UART/(115200*16) -1) */
 #define UART_UDIVSLOT_VAL	0xC		/*((((SCLK_UART*10/(115200*16) -10))%10)*16/10)*/
-#elif defined(CONFIG_CLK_1000_400_200) || defined(CONFIG_CLK_1000_200_200) || defined(CONFIG_CLK_800_400_200)
+#elif defined(CONFIG_CLK_1000_400_200) || defined(CONFIG_CLK_1000_200_200) || defined(CONFIG_CLK_800_400_200) || defined(CONFIG_CLK_200_400_200)
 #define UART_UBRDIV_VAL	0x2F     /* (SCLK_UART/(115200*16) -1) */
 #define UART_UDIVSLOT_VAL 0x3		/*((((SCLK_UART*10/(115200*16) -10))%10)*16/10)*/
 #endif
